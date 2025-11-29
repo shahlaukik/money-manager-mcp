@@ -17,31 +17,31 @@ The API endpoints documented here were discovered through reverse engineering th
 1. **Web Interface Analysis**: Fetched the HTML structure of the Money Manager web interface to understand the application layout and identify JavaScript file references.
 
 2. **JavaScript Analysis**: Downloaded and analyzed the frontend JavaScript files to understand:
-   - How API calls are made (using ExtJS's `Ext.Ajax.request`)
-   - What endpoints exist and their parameters
-   - Expected request/response formats
-   - Data models and their structures
+    - How API calls are made (using ExtJS's `Ext.Ajax.request`)
+    - What endpoints exist and their parameters
+    - Expected request/response formats
+    - Data models and their structures
 
 3. **Network Traffic Analysis**: Observed actual API calls to verify:
-   - Request parameter formats
-   - Response data structures
-   - Session handling mechanisms
+    - Request parameter formats
+    - Response data structures
+    - Session handling mechanisms
 
 4. **Documentation Synthesis**: Combined findings into this comprehensive API reference.
 
 ### Key Files Analyzed
 
-| File | Purpose |
-|------|---------|
-| `initVar.js` | Configuration variables and base URI |
-| `init.js` | Store initialization and data loading |
-| `moneybook.js` | Transaction CRUD operations |
-| `moneybookLeft.js` | Summary panel and charts |
-| `asset.js` | Asset and credit card management |
-| `assetDashBoard.js` | Dashboard charts and analytics |
-| `assetDetailList.js` | Individual asset details |
-| `setting.js` | Backup/restore functionality |
-| `layout.js` | Main application layout |
+| File                 | Purpose                               |
+| -------------------- | ------------------------------------- |
+| `initVar.js`         | Configuration variables and base URI  |
+| `init.js`            | Store initialization and data loading |
+| `moneybook.js`       | Transaction CRUD operations           |
+| `moneybookLeft.js`   | Summary panel and charts              |
+| `asset.js`           | Asset and credit card management      |
+| `assetDashBoard.js`  | Dashboard charts and analytics        |
+| `assetDetailList.js` | Individual asset details              |
+| `setting.js`         | Backup/restore functionality          |
+| `layout.js`          | Main application layout               |
 
 ### Techniques Used
 
@@ -72,28 +72,28 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ## API Endpoints Summary
 
-| # | Endpoint | Method | Category | Description |
-|---|----------|--------|----------|-------------|
-| 1 | `/getInitData` | GET/POST | Initialization | Get initial application data |
-| 2 | `/getDataByPeriod` | GET | Transactions | Get transaction data by date range |
-| 3 | `/create` | POST | Transactions | Create a new transaction |
-| 4 | `/update` | POST | Transactions | Update an existing transaction |
-| 5 | `/delete` | POST | Transactions | Delete transactions |
-| 6 | `/getSummaryDataByPeriod` | GET | Summary | Get financial summary by period |
-| 7 | `/getExcelFile` | POST | Export | Export data to Excel file |
-| 8 | `/getAssetData` | GET | Assets | Get asset list data (tree structure) |
-| 9 | `/getCardData` | GET | Assets | Get credit card data (tree structure) |
-| 10 | `/assetAdd` | POST | Assets | Add a new asset |
-| 11 | `/assetModify` | POST | Assets | Modify an existing asset |
-| 12 | `/removeAsset` | POST | Assets | Remove an asset |
-| 13 | `/addAssetCard` | POST | Credit Cards | Add a new credit card |
-| 14 | `/modifyCard` | POST | Credit Cards | Modify a credit card |
-| 15 | `/moveAsset` | POST | Transfers | Transfer money between assets |
-| 16 | `/modifyMoveAsset` | POST | Transfers | Modify an asset transfer |
-| 17 | `/getDashBoardData` | GET | Dashboard | Get dashboard chart data |
-| 18 | `/getEachAssetChartData` | POST | Dashboard | Get individual asset chart data |
-| 19 | `/uploadSqlFile` | POST | Backup/Restore | Upload SQLite backup file |
-| 20 | `/money.sqlite` | GET | Backup/Restore | Download SQLite database file |
+| #   | Endpoint                  | Method   | Category       | Description                           |
+| --- | ------------------------- | -------- | -------------- | ------------------------------------- |
+| 1   | `/getInitData`            | GET/POST | Initialization | Get initial application data          |
+| 2   | `/getDataByPeriod`        | GET      | Transactions   | Get transaction data by date range    |
+| 3   | `/create`                 | POST     | Transactions   | Create a new transaction              |
+| 4   | `/update`                 | POST     | Transactions   | Update an existing transaction        |
+| 5   | `/delete`                 | POST     | Transactions   | Delete transactions                   |
+| 6   | `/getSummaryDataByPeriod` | GET      | Summary        | Get financial summary by period       |
+| 7   | `/getExcelFile`           | POST     | Export         | Export data to Excel file             |
+| 8   | `/getAssetData`           | GET      | Assets         | Get asset list data (tree structure)  |
+| 9   | `/getCardData`            | GET      | Assets         | Get credit card data (tree structure) |
+| 10  | `/assetAdd`               | POST     | Assets         | Add a new asset                       |
+| 11  | `/assetModify`            | POST     | Assets         | Modify an existing asset              |
+| 12  | `/removeAsset`            | POST     | Assets         | Remove an asset                       |
+| 13  | `/addAssetCard`           | POST     | Credit Cards   | Add a new credit card                 |
+| 14  | `/modifyCard`             | POST     | Credit Cards   | Modify a credit card                  |
+| 15  | `/moveAsset`              | POST     | Transfers      | Transfer money between assets         |
+| 16  | `/modifyMoveAsset`        | POST     | Transfers      | Modify an asset transfer              |
+| 17  | `/getDashBoardData`       | GET      | Dashboard      | Get dashboard chart data              |
+| 18  | `/getEachAssetChartData`  | POST     | Dashboard      | Get individual asset chart data       |
+| 19  | `/uploadSqlFile`          | POST     | Backup/Restore | Upload SQLite backup file             |
+| 20  | `/money.sqlite`           | GET      | Backup/Restore | Download SQLite database file         |
 
 ---
 
@@ -111,6 +111,7 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 | `mbid` | string | No | Money book ID |
 
 **Response Format:** JSON
+
 ```json
 {
   "initData": {
@@ -178,6 +179,7 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 | `assetId` | string | No | Filter by specific asset ID |
 
 **Response Format:** XML
+
 ```xml
 <data>
   <results>count</results>
@@ -202,6 +204,7 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 ```
 
 **inOutCode Values:**
+
 - `0` = Income
 - `1` = Expense
 - `2` = Unknown
@@ -283,32 +286,33 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 | `endDate` | string | Yes | End date (YYYY-MM-DD) |
 
 **Response Format:** JSON
+
 ```json
 {
-  "summary": {
-    "startDate": "YYYY-MM-DD",
-    "endDate": "YYYY-MM-DD",
-    "income": "number",
-    "outcome": "number",
-    "cash": "number",
-    "card": "number",
-    "etcExpense": "number",
-    "etcExpenseOpt": "boolean",
-    "sum": "number"
-  },
-  "income": [
-    {
-      "mcname": "string",
-      "mcSum": "number"
-    }
-  ],
-  "outcome": [
-    {
-      "mcname": "string",
-      "mcSum": "number",
-      "budget": "number"
-    }
-  ]
+    "summary": {
+        "startDate": "YYYY-MM-DD",
+        "endDate": "YYYY-MM-DD",
+        "income": "number",
+        "outcome": "number",
+        "cash": "number",
+        "card": "number",
+        "etcExpense": "number",
+        "etcExpenseOpt": "boolean",
+        "sum": "number"
+    },
+    "income": [
+        {
+            "mcname": "string",
+            "mcSum": "number"
+        }
+    ],
+    "outcome": [
+        {
+            "mcname": "string",
+            "mcSum": "number",
+            "budget": "number"
+        }
+    ]
 }
 ```
 
@@ -340,25 +344,26 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves asset list in tree structure format.
 
 **Response Format:** JSON (Tree structure for ExtJS TreeGrid)
+
 ```json
 [
-  {
-    "assetGroupId": "string",
-    "assetType": "group",
-    "assetName": "string",
-    "assetMoney": "number",
-    "color": "string",
-    "children": [
-      {
-        "assetId": "string",
-        "assetType": "item",
+    {
+        "assetGroupId": "string",
+        "assetType": "group",
         "assetName": "string",
         "assetMoney": "number",
         "color": "string",
-        "linkAssetId": "string"
-      }
-    ]
-  }
+        "children": [
+            {
+                "assetId": "string",
+                "assetType": "item",
+                "assetName": "string",
+                "assetMoney": "number",
+                "color": "string",
+                "linkAssetId": "string"
+            }
+        ]
+    }
 ]
 ```
 
@@ -371,29 +376,30 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves credit card list in tree structure format.
 
 **Response Format:** JSON (Tree structure for ExtJS TreeGrid)
+
 ```json
 [
-  {
-    "assetGroupId": "string",
-    "assetType": "group",
-    "assetName": "string",
-    "assetMoney": "number",
-    "notPayMoney": "number",
-    "color": "string",
-    "children": [
-      {
-        "assetId": "string",
-        "assetType": "item",
+    {
+        "assetGroupId": "string",
+        "assetType": "group",
         "assetName": "string",
         "assetMoney": "number",
         "notPayMoney": "number",
         "color": "string",
-        "linkAssetId": "string",
-        "jungsanDay": "number",
-        "paymentDay": "number"
-      }
-    ]
-  }
+        "children": [
+            {
+                "assetId": "string",
+                "assetType": "item",
+                "assetName": "string",
+                "assetMoney": "number",
+                "notPayMoney": "number",
+                "color": "string",
+                "linkAssetId": "string",
+                "jungsanDay": "number",
+                "paymentDay": "number"
+            }
+        ]
+    }
 ]
 ```
 
@@ -539,33 +545,34 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves dashboard chart data including asset trends and portfolio breakdown.
 
 **Response Format:** JSON
+
 ```json
 {
-  "assetSummary": {
-    "totalAsset": "number",
-    "asset": "number",
-    "debt": "number"
-  },
-  "assetLine": [
-    {
-      "month": "string",
-      "total": "number",
-      "asset": "number",
-      "debt": "number"
-    }
-  ],
-  "assetRatio": [
-    {
-      "assetName": "string",
-      "assetMoney": "number"
-    }
-  ],
-  "debtRatio": [
-    {
-      "assetName": "string",
-      "assetMoney": "number"
-    }
-  ]
+    "assetSummary": {
+        "totalAsset": "number",
+        "asset": "number",
+        "debt": "number"
+    },
+    "assetLine": [
+        {
+            "month": "string",
+            "total": "number",
+            "asset": "number",
+            "debt": "number"
+        }
+    ],
+    "assetRatio": [
+        {
+            "assetName": "string",
+            "assetMoney": "number"
+        }
+    ],
+    "debtRatio": [
+        {
+            "assetName": "string",
+            "assetMoney": "number"
+        }
+    ]
 }
 ```
 
@@ -583,14 +590,15 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 | `assetId` | string | Yes | Asset ID |
 
 **Response Format:** JSON
+
 ```json
 {
-  "assetChartData": [
-    {
-      "month": "string",
-      "assetMoney": "number"
-    }
-  ]
+    "assetChartData": [
+        {
+            "month": "string",
+            "assetMoney": "number"
+        }
+    ]
 }
 ```
 
@@ -624,6 +632,7 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 ## Data Models
 
 ### Transaction Record (MoneyBookElem)
+
 ```javascript
 {
   id: string,           // Transaction ID
@@ -645,6 +654,7 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 ```
 
 ### Asset Record
+
 ```javascript
 {
   assetId: string,      // Asset ID
@@ -658,6 +668,7 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 ```
 
 ### Credit Card Record
+
 ```javascript
 {
   assetId: string,      // Card asset ID
@@ -676,13 +687,13 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 The API uses standard HTTP status codes:
 
-| Status Code | Description |
-|-------------|-------------|
-| 200 | Success |
-| 400 | Bad Request - Invalid parameters |
-| 401 | Unauthorized - Session expired |
-| 404 | Not Found - Resource doesn't exist |
-| 500 | Server Error |
+| Status Code | Description                        |
+| ----------- | ---------------------------------- |
+| 200         | Success                            |
+| 400         | Bad Request - Invalid parameters   |
+| 401         | Unauthorized - Session expired     |
+| 404         | Not Found - Resource doesn't exist |
+| 500         | Server Error                       |
 
 ---
 

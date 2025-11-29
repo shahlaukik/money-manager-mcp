@@ -22,29 +22,32 @@ An MCP (Model Context Protocol) server that enables AI assistants to manage pers
 ## 🚀 Quick Start
 
 1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+
+    ```bash
+    npm install
+    ```
 
 2. **Build the project:**
-   ```bash
-   npm run build
-   ```
+
+    ```bash
+    npm run build
+    ```
 
 3. **Configure your MCP client** (e.g., Claude Desktop):
-   ```json
-   {
-     "mcpServers": {
-       "money-manager": {
-         "command": "node",
-         "args": ["/path/to/money-manager-mcp/dist/index.js"],
-         "env": {
-           "MONEY_MANAGER_BASE_URL": "http://your-server:port"
-         }
-       }
-     }
-   }
-   ```
+
+    ```json
+    {
+        "mcpServers": {
+            "money-manager": {
+                "command": "node",
+                "args": ["/path/to/money-manager-mcp/dist/index.js"],
+                "env": {
+                    "MONEY_MANAGER_BASE_URL": "http://your-server:port"
+                }
+            }
+        }
+    }
+    ```
 
 4. **Start using with your AI assistant!**
 
@@ -52,27 +55,27 @@ An MCP (Model Context Protocol) server that enables AI assistants to manage pers
 
 ## 📋 Available Tools
 
-| Category | Tools | Description |
-|----------|-------|-------------|
-| **Initialization** | `init_get_data` | Get categories, payment types, configuration |
-| **Transactions** | `transaction_list`, `transaction_create`, `transaction_update`, `transaction_delete` | Full CRUD for income/expenses |
-| **Summaries** | `summary_get_period`, `summary_export_excel` | Financial reports and exports |
-| **Assets** | `asset_list`, `asset_create`, `asset_update`, `asset_delete` | Bank account management |
-| **Credit Cards** | `card_list`, `card_create`, `card_update` | Credit card tracking |
-| **Transfers** | `transfer_create`, `transfer_update` | Move money between accounts |
-| **Dashboard** | `dashboard_get_overview`, `dashboard_get_asset_chart` | Analytics and trends |
+| Category           | Tools                                                                                | Description                                  |
+| ------------------ | ------------------------------------------------------------------------------------ | -------------------------------------------- |
+| **Initialization** | `init_get_data`                                                                      | Get categories, payment types, configuration |
+| **Transactions**   | `transaction_list`, `transaction_create`, `transaction_update`, `transaction_delete` | Full CRUD for income/expenses                |
+| **Summaries**      | `summary_get_period`, `summary_export_excel`                                         | Financial reports and exports                |
+| **Assets**         | `asset_list`, `asset_create`, `asset_update`, `asset_delete`                         | Bank account management                      |
+| **Credit Cards**   | `card_list`, `card_create`, `card_update`                                            | Credit card tracking                         |
+| **Transfers**      | `transfer_create`, `transfer_update`                                                 | Move money between accounts                  |
+| **Dashboard**      | `dashboard_get_overview`, `dashboard_get_asset_chart`                                | Analytics and trends                         |
 
 > 📖 For usage examples, see [docs/USAGE.md](docs/USAGE.md)
 
 ## 📚 Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Setup Guide](docs/SETUP.md) | Installation and configuration |
-| [Usage Guide](docs/USAGE.md) | Tool descriptions and examples |
-| [API Documentation](docs/technical/API_DOCUMENTATION.md) | Technical API reference |
-| [Architecture](docs/technical/ARCHITECTURE.md) | System design and structure |
-| [Contributing](docs/CONTRIBUTING.md) | How to contribute |
+| Document                                                 | Description                    |
+| -------------------------------------------------------- | ------------------------------ |
+| [Setup Guide](docs/SETUP.md)                             | Installation and configuration |
+| [Usage Guide](docs/USAGE.md)                             | Tool descriptions and examples |
+| [API Documentation](docs/technical/API_DOCUMENTATION.md) | Technical API reference        |
+| [Architecture](docs/technical/ARCHITECTURE.md)           | System design and structure    |
+| [Contributing](docs/CONTRIBUTING.md)                     | How to contribute              |
 
 ## ⚠️ Legal Disclaimer
 
@@ -107,6 +110,7 @@ Contributions are welcome! Please see our [Contributing Guide](docs/CONTRIBUTING
 - The open-source community for inspiration and support
 
 ---
+
 <p>
 <div align="center">
     <p>Made with ❤️ by <a href="https://github.com/shahlaukik">Laukik Shah</a></p>

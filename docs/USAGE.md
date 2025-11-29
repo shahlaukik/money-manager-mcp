@@ -6,15 +6,15 @@ This guide covers how to use the Money Manager MCP tools with AI assistants.
 
 The MCP server provides **18 tools** organized into 7 categories:
 
-| Category | Tools | Description |
-|----------|-------|-------------|
-| Initialization | 1 | Get app configuration and categories |
-| Transactions | 4 | Create, read, update, delete transactions |
-| Summaries | 2 | Financial reports and Excel export |
-| Assets | 4 | Manage bank accounts and assets |
-| Credit Cards | 3 | Manage credit cards |
-| Transfers | 2 | Move money between accounts |
-| Dashboard | 2 | Charts and analytics |
+| Category       | Tools | Description                               |
+| -------------- | ----- | ----------------------------------------- |
+| Initialization | 1     | Get app configuration and categories      |
+| Transactions   | 4     | Create, read, update, delete transactions |
+| Summaries      | 2     | Financial reports and Excel export        |
+| Assets         | 4     | Manage bank accounts and assets           |
+| Credit Cards   | 3     | Manage credit cards                       |
+| Transfers      | 2     | Move money between accounts               |
+| Dashboard      | 2     | Charts and analytics                      |
 
 ---
 
@@ -30,6 +30,7 @@ Retrieves initial application data including categories, payment types, asset gr
 | `mbid` | string | No | Money book ID |
 
 **Example prompts:**
+
 - "Get my Money Manager configuration"
 - "Show me my expense categories"
 - "What payment types are available?"
@@ -51,6 +52,7 @@ Lists transactions within a date range.
 | `assetId` | string | No | Filter by asset |
 
 **Example prompts:**
+
 - "Show my transactions from November 2025"
 - "List all transactions from my checking account this month"
 - "What did I spend in the last 7 days?"
@@ -76,6 +78,7 @@ Creates a new income or expense transaction.
 | `mbDetailContent` | string | No | Detailed notes |
 
 **Example prompts:**
+
 - "Record a $50 grocery expense from my checking account"
 - "Add $3000 salary income for today"
 - "Log a $25 restaurant expense with note 'lunch with team'"
@@ -90,6 +93,7 @@ Updates an existing transaction.
 | `id` | string | Yes | Transaction ID |
 
 **Example prompts:**
+
 - "Change the amount on transaction XYZ to $75"
 - "Update the category of my last grocery expense to 'Dining Out'"
 
@@ -103,6 +107,7 @@ Deletes one or more transactions.
 | `ids` | array | Yes | Transaction IDs to delete |
 
 **Example prompts:**
+
 - "Delete transaction ID abc123"
 - "Remove the duplicate transaction from yesterday"
 
@@ -121,6 +126,7 @@ Retrieves financial summary statistics for a date range.
 | `endDate` | string | Yes | End date (YYYY-MM-DD) |
 
 **Example prompts:**
+
 - "What's my spending summary for November?"
 - "Show my income vs expenses this month"
 - "How much did I spend on each category last month?"
@@ -140,6 +146,7 @@ Exports transaction data to an Excel file.
 | `inOutType` | string | No | Filter by type |
 
 **Example prompts:**
+
 - "Export my October transactions to Excel"
 - "Download a spreadsheet of all my expenses this year"
 
@@ -154,6 +161,7 @@ Retrieves all assets/accounts with balances.
 **Parameters:** None
 
 **Example prompts:**
+
 - "What are my current account balances?"
 - "Show me all my assets"
 - "List my bank accounts"
@@ -173,6 +181,7 @@ Creates a new asset/account.
 | `linkAssetName` | string | No | Linked asset name |
 
 **Example prompts:**
+
 - "Create a new savings account with $5000 balance"
 - "Add a new investment account"
 
@@ -192,6 +201,7 @@ Updates an existing asset.
 | `linkAssetName` | string | No | Linked asset name |
 
 **Example prompts:**
+
 - "Update my savings account balance to $6500"
 - "Rename my checking account to 'Primary Checking'"
 
@@ -205,6 +215,7 @@ Removes an asset.
 | `assetId` | string | Yes | Asset ID |
 
 **Example prompts:**
+
 - "Delete my old savings account"
 
 ---
@@ -218,6 +229,7 @@ Retrieves all credit cards.
 **Parameters:** None
 
 **Example prompts:**
+
 - "Show my credit cards"
 - "What's my unpaid credit card balance?"
 
@@ -236,6 +248,7 @@ Creates a new credit card.
 | `paymentDay` | number | No | Payment due day (1-31) |
 
 **Example prompts:**
+
 - "Add a new Visa credit card linked to my checking account"
 
 ### `card_update`
@@ -273,6 +286,7 @@ Transfers money between assets.
 | `mbDetailContent` | string | No | Detailed notes |
 
 **Example prompts:**
+
 - "Transfer $500 from savings to checking"
 - "Move $1000 to my investment account"
 
@@ -298,6 +312,7 @@ Retrieves dashboard overview with trends and breakdown.
 **Parameters:** None
 
 **Example prompts:**
+
 - "Show my financial dashboard"
 - "What's my net worth trend?"
 - "Show my asset and debt breakdown"
@@ -312,6 +327,7 @@ Retrieves historical chart data for a specific asset.
 | `assetId` | string | Yes | Asset ID |
 
 **Example prompts:**
+
 - "Show the balance history for my savings account"
 - "How has my checking account balance changed over time?"
 
@@ -367,19 +383,23 @@ Retrieves historical chart data for a specific asset.
 ## Troubleshooting
 
 **"Asset/Category not found"**
+
 - Use `init_get_data` first to see available options
 - Check the exact names in Money Manager
 
 **"Invalid date format"**
+
 - Use YYYY-MM-DD format (e.g., "2025-11-15")
 - Or use natural language like "today" or "November 15"
 
 **"Transaction not created"**
+
 - Ensure all required fields are provided
 - Check that the asset and category exist
 - Verify the amount is a positive number
 
 **"Export failed"**
+
 - Use `.xls` extension (not `.xlsx`)
 - Ensure the output path is writable
 - Check available disk space

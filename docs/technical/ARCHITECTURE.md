@@ -11,6 +11,7 @@ This document describes the architecture of the Money Manager MCP (Model Context
 ### Programming Language: **TypeScript**
 
 **Rationale:**
+
 - First-class MCP SDK support with `@modelcontextprotocol/sdk`
 - Strong typing for API request/response schemas
 - Better IDE support and developer experience
@@ -19,23 +20,23 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 ### Core Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `@modelcontextprotocol/sdk` | MCP server implementation |
-| `axios` | HTTP client for API calls |
-| `zod` | Runtime schema validation |
-| `dotenv` | Environment variable management |
-| `xml2js` | XML response parsing (for transaction list) |
-| `tough-cookie` | Cookie/session management |
-| `axios-cookiejar-support` | Cookie jar integration with axios |
+| Package                     | Purpose                                     |
+| --------------------------- | ------------------------------------------- |
+| `@modelcontextprotocol/sdk` | MCP server implementation                   |
+| `axios`                     | HTTP client for API calls                   |
+| `zod`                       | Runtime schema validation                   |
+| `dotenv`                    | Environment variable management             |
+| `xml2js`                    | XML response parsing (for transaction list) |
+| `tough-cookie`              | Cookie/session management                   |
+| `axios-cookiejar-support`   | Cookie jar integration with axios           |
 
 ### Development Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `typescript` | TypeScript compiler |
+| Package       | Purpose                  |
+| ------------- | ------------------------ |
+| `typescript`  | TypeScript compiler      |
 | `@types/node` | Node.js type definitions |
-| `tsx` | TypeScript execution |
+| `tsx`         | TypeScript execution     |
 
 ---
 
@@ -81,38 +82,38 @@ money-manager-mcp/
 
 Tools follow the pattern: `{category}_{action}` using snake_case.
 
-| Category Prefix | Description |
-|-----------------|-------------|
-| `init_` | Initialization operations |
-| `transaction_` | Transaction CRUD operations |
-| `summary_` | Summary and reporting |
-| `asset_` | Asset management |
-| `card_` | Credit card management |
-| `transfer_` | Money transfers |
-| `dashboard_` | Dashboard/chart data |
+| Category Prefix | Description                 |
+| --------------- | --------------------------- |
+| `init_`         | Initialization operations   |
+| `transaction_`  | Transaction CRUD operations |
+| `summary_`      | Summary and reporting       |
+| `asset_`        | Asset management            |
+| `card_`         | Credit card management      |
+| `transfer_`     | Money transfers             |
+| `dashboard_`    | Dashboard/chart data        |
 
 ### Implemented Tools
 
-| # | Tool Name | API Endpoint | Method |
-|---|-----------|--------------|--------|
-| 1 | `init_get_data` | `/getInitData` | GET |
-| 2 | `transaction_list` | `/getDataByPeriod` | GET |
-| 3 | `transaction_create` | `/create` | POST |
-| 4 | `transaction_update` | `/update` | POST |
-| 5 | `transaction_delete` | `/delete` | POST |
-| 6 | `summary_get_period` | `/getSummaryDataByPeriod` | GET |
-| 7 | `summary_export_excel` | `/getExcelFile` | POST |
-| 8 | `asset_list` | `/getAssetData` | GET |
-| 9 | `asset_create` | `/assetAdd` | POST |
-| 10 | `asset_update` | `/assetModify` | POST |
-| 11 | `asset_delete` | `/removeAsset` | POST |
-| 12 | `card_list` | `/getCardData` | GET |
-| 13 | `card_create` | `/addAssetCard` | POST |
-| 14 | `card_update` | `/modifyCard` | POST |
-| 15 | `transfer_create` | `/moveAsset` | POST |
-| 16 | `transfer_update` | `/modifyMoveAsset` | POST |
-| 17 | `dashboard_get_overview` | `/getDashBoardData` | GET |
-| 18 | `dashboard_get_asset_chart` | `/getEachAssetChartData` | POST |
+| #   | Tool Name                   | API Endpoint              | Method |
+| --- | --------------------------- | ------------------------- | ------ |
+| 1   | `init_get_data`             | `/getInitData`            | GET    |
+| 2   | `transaction_list`          | `/getDataByPeriod`        | GET    |
+| 3   | `transaction_create`        | `/create`                 | POST   |
+| 4   | `transaction_update`        | `/update`                 | POST   |
+| 5   | `transaction_delete`        | `/delete`                 | POST   |
+| 6   | `summary_get_period`        | `/getSummaryDataByPeriod` | GET    |
+| 7   | `summary_export_excel`      | `/getExcelFile`           | POST   |
+| 8   | `asset_list`                | `/getAssetData`           | GET    |
+| 9   | `asset_create`              | `/assetAdd`               | POST   |
+| 10  | `asset_update`              | `/assetModify`            | POST   |
+| 11  | `asset_delete`              | `/removeAsset`            | POST   |
+| 12  | `card_list`                 | `/getCardData`            | GET    |
+| 13  | `card_create`               | `/addAssetCard`           | POST   |
+| 14  | `card_update`               | `/modifyCard`             | POST   |
+| 15  | `transfer_create`           | `/moveAsset`              | POST   |
+| 16  | `transfer_update`           | `/modifyMoveAsset`        | POST   |
+| 17  | `dashboard_get_overview`    | `/getDashBoardData`       | GET    |
+| 18  | `dashboard_get_asset_chart` | `/getEachAssetChartData`  | POST   |
 
 ---
 
@@ -183,12 +184,12 @@ The Money Manager API returns HTML-based `.xls` files (not true XLSX format). Th
 
 ```typescript
 enum ErrorCategory {
-  NETWORK = "NETWORK",           // Connection failures, timeouts
-  API = "API",                   // API returned error response
-  VALIDATION = "VALIDATION",     // Input validation failures
-  SESSION = "SESSION",           // Authentication/session issues
-  FILE = "FILE",                 // File system errors
-  INTERNAL = "INTERNAL"          // Unexpected errors
+    NETWORK = "NETWORK", // Connection failures, timeouts
+    API = "API", // API returned error response
+    VALIDATION = "VALIDATION", // Input validation failures
+    SESSION = "SESSION", // Authentication/session issues
+    FILE = "FILE", // File system errors
+    INTERNAL = "INTERNAL", // Unexpected errors
 }
 ```
 
@@ -196,11 +197,11 @@ enum ErrorCategory {
 
 ```typescript
 interface McpError {
-  code: string                   // Error code (e.g., "NETWORK_TIMEOUT")
-  category: ErrorCategory        // Error category
-  message: string                // Human-readable message
-  details?: Record<string, any>  // Additional context
-  retryable: boolean             // Whether retry might succeed
+    code: string; // Error code (e.g., "NETWORK_TIMEOUT")
+    category: ErrorCategory; // Error category
+    message: string; // Human-readable message
+    details?: Record<string, any>; // Additional context
+    retryable: boolean; // Whether retry might succeed
 }
 ```
 
@@ -210,13 +211,13 @@ interface McpError {
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `MONEY_MANAGER_BASE_URL` | Yes | - | Server URL |
-| `MONEY_MANAGER_TIMEOUT` | No | 30000 | Request timeout (ms) |
-| `MONEY_MANAGER_RETRY_COUNT` | No | 3 | Retry attempts |
-| `MONEY_MANAGER_LOG_LEVEL` | No | info | Log level |
-| `MONEY_MANAGER_SESSION_PERSIST` | No | true | Persist cookies |
+| Variable                        | Required | Default | Description          |
+| ------------------------------- | -------- | ------- | -------------------- |
+| `MONEY_MANAGER_BASE_URL`        | Yes      | -       | Server URL           |
+| `MONEY_MANAGER_TIMEOUT`         | No       | 30000   | Request timeout (ms) |
+| `MONEY_MANAGER_RETRY_COUNT`     | No       | 3       | Retry attempts       |
+| `MONEY_MANAGER_LOG_LEVEL`       | No       | info    | Log level            |
+| `MONEY_MANAGER_SESSION_PERSIST` | No       | true    | Persist cookies      |
 
 ### Configuration Loading
 
@@ -286,33 +287,33 @@ interface McpError {
 ```typescript
 // Transaction
 interface Transaction {
-  id: string;
-  mbDate: string;
-  assetId: string;
-  payType: string;
-  mcid: string;
-  mbCategory: string;
-  mbCash: number;
-  inOutCode: string;
-  inOutType: string;
-  // ... optional fields
+    id: string;
+    mbDate: string;
+    assetId: string;
+    payType: string;
+    mcid: string;
+    mbCategory: string;
+    mbCash: number;
+    inOutCode: string;
+    inOutType: string;
+    // ... optional fields
 }
 
 // Asset
 interface Asset {
-  assetId: string;
-  assetGroupId: string;
-  assetType: 'group' | 'item';
-  assetName: string;
-  assetMoney: number;
-  children?: Asset[];
+    assetId: string;
+    assetGroupId: string;
+    assetType: "group" | "item";
+    assetName: string;
+    assetMoney: number;
+    children?: Asset[];
 }
 
 // Category
 interface Category {
-  mcid: string;
-  mcname: string;
-  mcsc?: SubCategory[];
+    mcid: string;
+    mcname: string;
+    mcsc?: SubCategory[];
 }
 ```
 

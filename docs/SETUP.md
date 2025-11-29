@@ -8,9 +8,9 @@ This guide covers installation and configuration of the Money Manager MCP server
 - **npm** >= 9.0.0
 - **Realbyte Money Manager** server running and accessible
 - An MCP-compatible client:
-  - Claude Desktop
-  - VS Code with GitHub Copilot
-  - Other MCP-compatible AI tools
+    - Claude Desktop
+    - VS Code with GitHub Copilot
+    - Other MCP-compatible AI tools
 
 ## Installation
 
@@ -18,22 +18,22 @@ This guide covers installation and configuration of the Money Manager MCP server
 
 1. **Clone the repository:**
 
-   ```bash
-   git clone https://github.com/shahlaukik/money-manager-mcp.git
-   cd money-manager-mcp
-   ```
+    ```bash
+    git clone https://github.com/shahlaukik/money-manager-mcp.git
+    cd money-manager-mcp
+    ```
 
 2. **Install dependencies:**
 
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 3. **Build the project:**
 
-   ```bash
-   npm run build
-   ```
+    ```bash
+    npm run build
+    ```
 
 4. **Configure environment** (see [Configuration](#configuration) below)
 
@@ -76,11 +76,11 @@ You can also use a `money-manager-config.json` file:
 
 ```json
 {
-  "baseUrl": "http://your-server-ip:port",
-  "timeout": 30000,
-  "retryCount": 3,
-  "logLevel": "info",
-  "sessionPersist": true
+    "baseUrl": "http://your-server-ip:port",
+    "timeout": 30000,
+    "retryCount": 3,
+    "logLevel": "info",
+    "sessionPersist": true
 }
 ```
 
@@ -101,15 +101,15 @@ Add to your Claude Desktop configuration file:
 
 ```json
 {
-  "mcpServers": {
-    "money-manager": {
-      "command": "node",
-      "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
-      "env": {
-        "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-      }
+    "mcpServers": {
+        "money-manager": {
+            "command": "node",
+            "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
+            "env": {
+                "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -123,16 +123,16 @@ Create a `mcp.json` file in your workspace root:
 
 ```json
 {
-  "servers": {
-    "money-manager": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
-      "env": {
-        "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-      }
+    "servers": {
+        "money-manager": {
+            "type": "stdio",
+            "command": "node",
+            "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
+            "env": {
+                "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -142,18 +142,18 @@ Add to your VS Code `settings.json` (File > Preferences > Settings > Open Settin
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "money-manager": {
-        "type": "stdio",
-        "command": "node",
-        "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
-        "env": {
-          "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
+    "mcp": {
+        "servers": {
+            "money-manager": {
+                "type": "stdio",
+                "command": "node",
+                "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
+                "env": {
+                    "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 
@@ -163,16 +163,16 @@ Create `.vscode/mcp.json` in your workspace:
 
 ```json
 {
-  "servers": {
-    "money-manager": {
-      "type": "stdio", 
-      "command": "node",
-      "args": ["${workspaceFolder}/dist/index.js"],
-      "env": {
-        "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-      }
+    "servers": {
+        "money-manager": {
+            "type": "stdio",
+            "command": "node",
+            "args": ["${workspaceFolder}/dist/index.js"],
+            "env": {
+                "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -191,7 +191,7 @@ Create `.vscode/mcp.json` in your workspace:
 - Restart VS Code after adding or modifying MCP server configurations
 - Use absolute paths unless using workspace variables like `${workspaceFolder}`
 
-<!-- 
+<!--
 ### Using npx
 
 Note: This section is commented out as the package is not yet published to npm.
@@ -263,9 +263,9 @@ In Claude Desktop or VS Code with Copilot:
 2. Restart the application
 3. Ask the AI to use a Money Manager tool:
 
-   ```text
-   Get my Money Manager initialization data
-   ```
+    ```text
+    Get my Money Manager initialization data
+    ```
 
 The AI should invoke the `init_get_data` tool.
 
@@ -320,10 +320,10 @@ Or in your environment configuration:
 
 ```json
 {
-  "env": {
-    "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port",
-    "MONEY_MANAGER_LOG_LEVEL": "debug"
-  }
+    "env": {
+        "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port",
+        "MONEY_MANAGER_LOG_LEVEL": "debug"
+    }
 }
 ```
 
