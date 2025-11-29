@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE and editor files
+.idea/
+.vscode/mcp.json
+.roo/mcp.json
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test coverage
+coverage/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Session/cookie storage (if persisted)
+.session/
+cookies.json
+.session-cookies.json
+
+# Exported files with financial data
+*.xls
+*.xlsx
+
+# Debug files
+response.txt
+
+# Backup files created during testing
+*.sqlite
+*.bak
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
