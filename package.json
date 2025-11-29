@@ -23,6 +23,18 @@
   ],
   "author": "",
   "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shahlaukik/money-manager-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shahlaukik/money-manager-mcp/issues"
+  },
+  "homepage": "https://github.com/shahlaukik/money-manager-mcp#readme",
+  "types": "dist/index.d.ts",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "axios": "^1.6.0",

@@ -15,6 +15,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Local docs and prompts
+docs-local/
+.github/prompts/
+
 # IDE and editor files
 .idea/
 .vscode/mcp.json
