@@ -487,9 +487,24 @@ class MoneyManagerMcpServer {
    */
   async start(): Promise<void> {
     try {
+      // Parse command line arguments
+      const args = process.argv.slice(2);
+      let customBaseUrl: string | undefined;
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--baseUrl' && args[i + 1]) {
+          customBaseUrl = args[i + 1];
+          break;
+        }
+      }
+
       // Load configuration
       this.config = await loadConfig();
       console.error(`[MCP Server] Configuration loaded. Base URL: ${this.config.server.baseUrl}`);
+
+      // Override baseUrl if provided via command line
+      if (customBaseUrl) {
+        this.config.server.baseUrl = customBaseUrl;
+      }
 
       // Create HTTP client
       this.httpClient = createHttpClient(this.config);
