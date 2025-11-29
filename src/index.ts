@@ -499,12 +499,12 @@ class MoneyManagerMcpServer {
 
       // Load configuration
       this.config = await loadConfig();
-      console.error(`[MCP Server] Configuration loaded. Base URL: ${this.config.server.baseUrl}`);
-
+      
       // Override baseUrl if provided via command line
       if (customBaseUrl) {
         this.config.server.baseUrl = customBaseUrl;
       }
+      console.error(`[MCP Server] Configuration loaded. Base URL: ${this.config.server.baseUrl}`);
 
       // Create HTTP client
       this.httpClient = createHttpClient(this.config);
