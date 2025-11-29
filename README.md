@@ -1,14 +1,11 @@
 # Money Manager MCP Server
 
-<!-- 
-  TODO: Add project logo/banner here
-  ![Money Manager MCP](./docs/assets/banner.png)
--->
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Compatible-purple)](https://modelcontextprotocol.io/)
 [![Open Source Love](https://badges.frapsoft.com/os/v2/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
+
+![Money Manager MCP](./docs/assets/banner.png)
 
 An MCP (Model Context Protocol) server that enables AI assistants to manage personal finances through the Realbyte Money Manager application.
 
