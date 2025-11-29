@@ -15,6 +15,8 @@ import { wrapError, ValidationError } from './errors/index.js';
 import { ToolSchemas, type ToolName, safeValidateToolInput } from './schemas/index.js';
 import { executeToolHandler } from './tools/handlers.js';
 
+import packageJson from "../package.json" with { type: "json" };
+
 /**
  * Tool definitions for the MCP server
  * Each tool maps to a Money Manager API endpoint
@@ -344,15 +346,15 @@ class MoneyManagerMcpServer {
 
   constructor() {
     this.server = new Server(
-      {
-        name: 'money-manager-mcp',
-        version: '1.0.0',
-      },
-      {
-        capabilities: {
-          tools: {},
+        {
+            name: "money-manager-mcp",
+            version: packageJson.version,
         },
-      }
+        {
+            capabilities: {
+                tools: {},
+            },
+        }
     );
 
     this.setupHandlers();
