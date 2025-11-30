@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "money-manager-mcp": "./dist/index.js"
+    "money-manager-mcp": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -28,7 +28,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/shahlaukik/money-manager-mcp.git"
+    "url": "git+https://github.com/shahlaukik/money-manager-mcp.git"
   },
   "bugs": {
     "url": "https://github.com/shahlaukik/money-manager-mcp/issues"
