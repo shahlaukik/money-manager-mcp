@@ -6,10 +6,12 @@ This guide covers installation and configuration of the Money Manager MCP server
 
 - **Node.js** >= 18.0.0
 - **npm** >= 9.0.0
-- **Realbyte Money Manager** server running and accessible
+- **Realbyte Money Manager** app with web server enabled
+- Your phone and computer on the **same Wi-Fi network**
 - An MCP-compatible client:
     - Claude Desktop
     - VS Code with GitHub Copilot
+    - Cursor
     - Other MCP-compatible AI tools
 
 ## Installation
@@ -35,23 +37,25 @@ This guide covers installation and configuration of the Money Manager MCP server
     npm run build
     ```
 
-4. **Configure environment** (see [Configuration](#configuration) below)
+4. **Run the server:**
 
-### Global Installation (Optional)
-
-After building, you can make the server globally available:
-
-```bash
-npm link
-```
-
-This makes the `money-manager-mcp` command available system-wide.
+    ```bash
+    npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
+    ```
 
 ## Configuration
 
+### Command Line Arguments (Recommended)
+
+The simplest way to configure the server is via the `--baseUrl` argument:
+
+```bash
+npx money-manager-mcp@latest --baseUrl http://192.168.1.100:7200
+```
+
 ### Environment Variables
 
-Create a `.env` file in the project root:
+Alternatively, you can use environment variables. Create a `.env` file or set them in your MCP client config:
 
 ```bash
 # Required: Base URL of your Money Manager server
@@ -70,6 +74,14 @@ MONEY_MANAGER_LOG_LEVEL=info
 MONEY_MANAGER_SESSION_PERSIST=true
 ```
 
+### Configuration Priority
+
+The server reads configuration in this order (highest priority first):
+
+1. **Command line arguments** (`--baseUrl`)
+2. **Environment variables** (`MONEY_MANAGER_BASE_URL`)
+3. **Configuration file** (`money-manager-config.json`)
+
 ### Configuration File (Alternative)
 
 You can also use a `money-manager-config.json` file:
@@ -84,59 +96,63 @@ You can also use a `money-manager-config.json` file:
 }
 ```
 
-**Note:** Environment variables take precedence over the config file.
-
 ## MCP Client Setup
 
-### Claude Desktop
+### VS Code with GitHub Copilot (Recommended)
 
-Add to your Claude Desktop configuration file:
+VS Code supports MCP servers with interactive prompts for configuration. This is the most user-friendly setup.
 
-**Location:**
+#### Option 1: Workspace Configuration with Prompt (Recommended)
 
-- **macOS/Linux:** `~/.config/claude/claude_desktop_config.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
-**Configuration:**
-
-```json
-{
-    "mcpServers": {
-        "money-manager": {
-            "command": "node",
-            "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
-            "env": {
-                "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-            }
-        }
-    }
-}
-```
-
-### VS Code with GitHub Copilot
-
-VS Code uses the standard MCP configuration format. Create a `mcp.json` file in your workspace root or add to your VS Code settings:
-
-#### Option 1: Workspace Configuration (Recommended)
-
-Create a `mcp.json` file in your workspace root:
+Create `.vscode/mcp.json` in your workspace:
 
 ```json
 {
     "servers": {
         "money-manager": {
             "type": "stdio",
-            "command": "node",
-            "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
-            "env": {
-                "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-            }
+            "command": "npx",
+            "args": [
+                "money-manager-mcp@latest",
+                "--baseUrl",
+                "${input:moneyManager.baseUrl}"
+            ]
+        }
+    },
+    "inputs": [
+        {
+            "id": "moneyManager.baseUrl",
+            "description": "Enter the base URL for the Money Manager API",
+            "type": "promptString",
+            "default": "http://192.168.1.100:7200"
+        }
+    ]
+}
+```
+
+This configuration will prompt you for the base URL when the server starts.
+
+#### Option 2: Fixed Configuration
+
+If you prefer not to be prompted each time:
+
+```json
+{
+    "servers": {
+        "money-manager": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "money-manager-mcp@latest",
+                "--baseUrl",
+                "http://192.168.1.100:7200"
+            ]
         }
     }
 }
 ```
 
-#### Option 2: User Settings
+#### Option 3: User Settings (Global)
 
 Add to your VS Code `settings.json` (File > Preferences > Settings > Open Settings JSON):
 
@@ -146,30 +162,12 @@ Add to your VS Code `settings.json` (File > Preferences > Settings > Open Settin
         "servers": {
             "money-manager": {
                 "type": "stdio",
-                "command": "node",
-                "args": ["/absolute/path/to/money-manager-mcp/dist/index.js"],
-                "env": {
-                    "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-                }
-            }
-        }
-    }
-}
-```
-
-#### Option 3: Workspace Folder Configuration
-
-Create `.vscode/mcp.json` in your workspace:
-
-```json
-{
-    "servers": {
-        "money-manager": {
-            "type": "stdio",
-            "command": "node",
-            "args": ["${workspaceFolder}/dist/index.js"],
-            "env": {
-                "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
+                "command": "npx",
+                "args": [
+                    "money-manager-mcp@latest",
+                    "--baseUrl",
+                    "http://YOUR_PHONE_IP:PORT"
+                ]
             }
         }
     }
@@ -180,62 +178,86 @@ Create `.vscode/mcp.json` in your workspace:
 
 1. **View MCP Servers**: Use the Command Palette (`Ctrl+Shift+P`) and run "MCP: List Servers"
 2. **Server Status**: Check server status and outputs via the MCP Servers view
-3. **Configuration**: Use "MCP: Add Configuration" to set up servers through the UI
-4. **Variables**: Use `${workspaceFolder}` for relative paths in workspace configurations
+3. **Restart Server**: Use "MCP: Restart Server" if you need to reconnect
 
-**Important Notes:**
+### Claude Desktop
 
-- VS Code supports both `mcp.json` files and `settings.json` configuration
-- The `type: "stdio"` field is required for command-based servers
-- Environment variables in `env` are passed to the MCP server process
-- Restart VS Code after adding or modifying MCP server configurations
-- Use absolute paths unless using workspace variables like `${workspaceFolder}`
+Add to your Claude Desktop configuration file:
 
-<!--
-### Using npx
+**Location:**
 
-Note: This section is commented out as the package is not yet published to npm.
-Once published, users will be able to use npx instead of absolute paths.
+- **macOS/Linux:** `~/.config/claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-You can use npx instead of absolute paths:
-
-```bash
-npx money-manager-mcp
-```
-
-**Claude Desktop:**
+**Configuration (using npx - Recommended):**
 
 ```json
 {
-  "mcpServers": {
-    "money-manager": {
-      "command": "npx",
-      "args": ["money-manager-mcp"],
-      "env": {
-        "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-      }
+    "mcpServers": {
+        "money-manager": {
+            "command": "npx",
+            "args": ["money-manager-mcp@latest", "--baseUrl", "http://YOUR_PHONE_IP:PORT"]
+        }
     }
-  }
 }
 ```
 
-**VS Code:**
+**Configuration (using environment variables):**
 
 ```json
 {
-  "servers": {
-    "money-manager": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["money-manager-mcp"],
-      "env": {
-        "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port"
-      }
+    "mcpServers": {
+        "money-manager": {
+            "command": "npx",
+            "args": ["money-manager-mcp@latest"],
+            "env": {
+                "MONEY_MANAGER_BASE_URL": "http://YOUR_PHONE_IP:PORT"
+            }
+        }
     }
-  }
 }
 ```
--->
+
+**Configuration (from source):**
+
+```json
+{
+    "mcpServers": {
+        "money-manager": {
+            "command": "node",
+            "args": ["/absolute/path/to/money-manager-mcp/dist/index.js", "--baseUrl", "http://YOUR_PHONE_IP:PORT"]
+        }
+    }
+}
+```
+
+### Cursor
+
+Add to your Cursor MCP configuration:
+
+```json
+{
+    "mcpServers": {
+        "money-manager": {
+            "command": "npx",
+            "args": ["money-manager-mcp@latest", "--baseUrl", "http://YOUR_PHONE_IP:PORT"]
+        }
+    }
+}
+```
+
+### Other MCP Clients
+
+For any MCP-compatible client, use:
+
+- **Command:** `npx`
+- **Arguments:** `["money-manager-mcp@latest", "--baseUrl", "http://YOUR_PHONE_IP:PORT"]`
+
+Or with environment variables:
+
+- **Command:** `npx`
+- **Arguments:** `["money-manager-mcp@latest"]`
+- **Environment:** `{ "MONEY_MANAGER_BASE_URL": "http://YOUR_PHONE_IP:PORT" }`
 
 ## Verifying Installation
 
