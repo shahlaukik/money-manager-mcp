@@ -17,15 +17,15 @@ The API endpoints documented here were discovered through reverse engineering th
 1. **Web Interface Analysis**: Fetched the HTML structure of the Money Manager web interface to understand the application layout and identify JavaScript file references.
 
 2. **JavaScript Analysis**: Downloaded and analyzed the frontend JavaScript files to understand:
-    - How API calls are made (using ExtJS's `Ext.Ajax.request`)
-    - What endpoints exist and their parameters
-    - Expected request/response formats
-    - Data models and their structures
+   - How API calls are made (using ExtJS's `Ext.Ajax.request`)
+   - What endpoints exist and their parameters
+   - Expected request/response formats
+   - Data models and their structures
 
 3. **Network Traffic Analysis**: Observed actual API calls to verify:
-    - Request parameter formats
-    - Response data structures
-    - Session handling mechanisms
+   - Request parameter formats
+   - Response data structures
+   - Session handling mechanisms
 
 4. **Documentation Synthesis**: Combined findings into this comprehensive API reference.
 
@@ -54,7 +54,7 @@ The API endpoints documented here were discovered through reverse engineering th
 
 ## Base URL
 
-```
+```text
 {MONEY_MANAGER_BASE_URL}/moneyBook
 ```
 
@@ -289,30 +289,30 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ```json
 {
-    "summary": {
-        "startDate": "YYYY-MM-DD",
-        "endDate": "YYYY-MM-DD",
-        "income": "number",
-        "outcome": "number",
-        "cash": "number",
-        "card": "number",
-        "etcExpense": "number",
-        "etcExpenseOpt": "boolean",
-        "sum": "number"
-    },
-    "income": [
-        {
-            "mcname": "string",
-            "mcSum": "number"
-        }
-    ],
-    "outcome": [
-        {
-            "mcname": "string",
-            "mcSum": "number",
-            "budget": "number"
-        }
-    ]
+  "summary": {
+    "startDate": "YYYY-MM-DD",
+    "endDate": "YYYY-MM-DD",
+    "income": "number",
+    "outcome": "number",
+    "cash": "number",
+    "card": "number",
+    "etcExpense": "number",
+    "etcExpenseOpt": "boolean",
+    "sum": "number"
+  },
+  "income": [
+    {
+      "mcname": "string",
+      "mcSum": "number"
+    }
+  ],
+  "outcome": [
+    {
+      "mcname": "string",
+      "mcSum": "number",
+      "budget": "number"
+    }
+  ]
 }
 ```
 
@@ -347,23 +347,23 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ```json
 [
-    {
-        "assetGroupId": "string",
-        "assetType": "group",
+  {
+    "assetGroupId": "string",
+    "assetType": "group",
+    "assetName": "string",
+    "assetMoney": "number",
+    "color": "string",
+    "children": [
+      {
+        "assetId": "string",
+        "assetType": "item",
         "assetName": "string",
         "assetMoney": "number",
         "color": "string",
-        "children": [
-            {
-                "assetId": "string",
-                "assetType": "item",
-                "assetName": "string",
-                "assetMoney": "number",
-                "color": "string",
-                "linkAssetId": "string"
-            }
-        ]
-    }
+        "linkAssetId": "string"
+      }
+    ]
+  }
 ]
 ```
 
@@ -379,27 +379,27 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ```json
 [
-    {
-        "assetGroupId": "string",
-        "assetType": "group",
+  {
+    "assetGroupId": "string",
+    "assetType": "group",
+    "assetName": "string",
+    "assetMoney": "number",
+    "notPayMoney": "number",
+    "color": "string",
+    "children": [
+      {
+        "assetId": "string",
+        "assetType": "item",
         "assetName": "string",
         "assetMoney": "number",
         "notPayMoney": "number",
         "color": "string",
-        "children": [
-            {
-                "assetId": "string",
-                "assetType": "item",
-                "assetName": "string",
-                "assetMoney": "number",
-                "notPayMoney": "number",
-                "color": "string",
-                "linkAssetId": "string",
-                "jungsanDay": "number",
-                "paymentDay": "number"
-            }
-        ]
-    }
+        "linkAssetId": "string",
+        "jungsanDay": "number",
+        "paymentDay": "number"
+      }
+    ]
+  }
 ]
 ```
 
@@ -548,31 +548,31 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ```json
 {
-    "assetSummary": {
-        "totalAsset": "number",
-        "asset": "number",
-        "debt": "number"
-    },
-    "assetLine": [
-        {
-            "month": "string",
-            "total": "number",
-            "asset": "number",
-            "debt": "number"
-        }
-    ],
-    "assetRatio": [
-        {
-            "assetName": "string",
-            "assetMoney": "number"
-        }
-    ],
-    "debtRatio": [
-        {
-            "assetName": "string",
-            "assetMoney": "number"
-        }
-    ]
+  "assetSummary": {
+    "totalAsset": "number",
+    "asset": "number",
+    "debt": "number"
+  },
+  "assetLine": [
+    {
+      "month": "string",
+      "total": "number",
+      "asset": "number",
+      "debt": "number"
+    }
+  ],
+  "assetRatio": [
+    {
+      "assetName": "string",
+      "assetMoney": "number"
+    }
+  ],
+  "debtRatio": [
+    {
+      "assetName": "string",
+      "assetMoney": "number"
+    }
+  ]
 }
 ```
 
@@ -593,12 +593,12 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ```json
 {
-    "assetChartData": [
-        {
-            "month": "string",
-            "assetMoney": "number"
-        }
-    ]
+  "assetChartData": [
+    {
+      "month": "string",
+      "assetMoney": "number"
+    }
+  ]
 }
 ```
 

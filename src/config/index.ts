@@ -1,7 +1,7 @@
-import { z } from 'zod';
-import * as fs from 'fs';
-import * as path from 'path';
-import { config as dotenvConfig } from 'dotenv';
+import { z } from "zod";
+import * as fs from "fs";
+import * as path from "path";
+import { config as dotenvConfig } from "dotenv";
 
 // Load environment variables from .env file
 dotenvConfig();
@@ -19,19 +19,19 @@ export const ConfigSchema = z.object({
   session: z
     .object({
       persist: z.boolean().default(true),
-      cookieFile: z.string().default('.session-cookies.json'),
+      cookieFile: z.string().default(".session-cookies.json"),
     })
     .optional(),
   logging: z
     .object({
-      level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-      format: z.enum(['json', 'text']).default('json'),
+      level: z.enum(["debug", "info", "warn", "error"]).default("info"),
+      format: z.enum(["json", "text"]).default("json"),
     })
     .optional(),
   defaults: z
     .object({
       mbid: z.string().optional(),
-      dateFormat: z.string().default('YYYY-MM-DD'),
+      dateFormat: z.string().default("YYYY-MM-DD"),
     })
     .optional(),
 });
@@ -46,28 +46,28 @@ export type Config = z.infer<typeof ConfigSchema>;
  */
 const DEFAULT_CONFIG: Partial<Config> = {
   server: {
-    baseUrl: 'http://192.168.1.100:8888',
+    baseUrl: "http://192.168.1.100:8888",
     timeout: 30000,
     retryCount: 3,
     retryDelay: 1000,
   },
   session: {
     persist: true,
-    cookieFile: '.session-cookies.json',
+    cookieFile: ".session-cookies.json",
   },
   logging: {
-    level: 'info',
-    format: 'json',
+    level: "info",
+    format: "json",
   },
   defaults: {
-    dateFormat: 'YYYY-MM-DD',
+    dateFormat: "YYYY-MM-DD",
   },
 };
 
 /**
  * Configuration file name
  */
-const CONFIG_FILE_NAME = '.money-manager-mcp.json';
+const CONFIG_FILE_NAME = ".money-manager-mcp.json";
 
 /**
  * Loads configuration from a JSON file if it exists
@@ -77,10 +77,13 @@ function loadConfigFile(): Partial<Config> {
 
   if (fs.existsSync(configPath)) {
     try {
-      const fileContent = fs.readFileSync(configPath, 'utf-8');
+      const fileContent = fs.readFileSync(configPath, "utf-8");
       return JSON.parse(fileContent) as Partial<Config>;
     } catch (error) {
-      console.warn(`Warning: Failed to parse config file at ${configPath}:`, error);
+      console.warn(
+        `Warning: Failed to parse config file at ${configPath}:`,
+        error,
+      );
       return {};
     }
   }
@@ -95,52 +98,63 @@ function loadEnvConfig(): Partial<Config> {
   const envConfig: Partial<Config> = {};
 
   // Server configuration from environment
-  if (process.env['MONEY_MANAGER_BASE_URL']) {
+  if (process.env["MONEY_MANAGER_BASE_URL"]) {
     envConfig.server = {
       ...envConfig.server,
-      baseUrl: process.env['MONEY_MANAGER_BASE_URL'],
+      baseUrl: process.env["MONEY_MANAGER_BASE_URL"],
       timeout: DEFAULT_CONFIG.server?.timeout ?? 30000,
       retryCount: DEFAULT_CONFIG.server?.retryCount ?? 3,
       retryDelay: DEFAULT_CONFIG.server?.retryDelay ?? 1000,
     };
   }
 
-  if (process.env['MONEY_MANAGER_TIMEOUT']) {
+  if (process.env["MONEY_MANAGER_TIMEOUT"]) {
     envConfig.server = {
       ...envConfig.server,
-      baseUrl: envConfig.server?.baseUrl ?? DEFAULT_CONFIG.server?.baseUrl ?? 'http://192.168.1.100:8888',
-      timeout: parseInt(process.env['MONEY_MANAGER_TIMEOUT'], 10),
+      baseUrl:
+        envConfig.server?.baseUrl ??
+        DEFAULT_CONFIG.server?.baseUrl ??
+        "http://192.168.1.100:8888",
+      timeout: parseInt(process.env["MONEY_MANAGER_TIMEOUT"], 10),
       retryCount: DEFAULT_CONFIG.server?.retryCount ?? 3,
       retryDelay: DEFAULT_CONFIG.server?.retryDelay ?? 1000,
     };
   }
 
-  if (process.env['MONEY_MANAGER_RETRY_COUNT']) {
+  if (process.env["MONEY_MANAGER_RETRY_COUNT"]) {
     envConfig.server = {
       ...envConfig.server,
-      baseUrl: envConfig.server?.baseUrl ?? DEFAULT_CONFIG.server?.baseUrl ?? 'http://192.168.1.100:8888',
-      timeout: envConfig.server?.timeout ?? DEFAULT_CONFIG.server?.timeout ?? 30000,
-      retryCount: parseInt(process.env['MONEY_MANAGER_RETRY_COUNT'], 10),
+      baseUrl:
+        envConfig.server?.baseUrl ??
+        DEFAULT_CONFIG.server?.baseUrl ??
+        "http://192.168.1.100:8888",
+      timeout:
+        envConfig.server?.timeout ?? DEFAULT_CONFIG.server?.timeout ?? 30000,
+      retryCount: parseInt(process.env["MONEY_MANAGER_RETRY_COUNT"], 10),
       retryDelay: DEFAULT_CONFIG.server?.retryDelay ?? 1000,
     };
   }
 
   // Logging configuration from environment
-  if (process.env['MONEY_MANAGER_LOG_LEVEL']) {
-    const level = process.env['MONEY_MANAGER_LOG_LEVEL'] as 'debug' | 'info' | 'warn' | 'error';
+  if (process.env["MONEY_MANAGER_LOG_LEVEL"]) {
+    const level = process.env["MONEY_MANAGER_LOG_LEVEL"] as
+      | "debug"
+      | "info"
+      | "warn"
+      | "error";
     envConfig.logging = {
       ...envConfig.logging,
       level,
-      format: DEFAULT_CONFIG.logging?.format ?? 'json',
+      format: DEFAULT_CONFIG.logging?.format ?? "json",
     };
   }
 
   // Session configuration from environment
-  if (process.env['MONEY_MANAGER_SESSION_PERSIST']) {
+  if (process.env["MONEY_MANAGER_SESSION_PERSIST"]) {
     envConfig.session = {
       ...envConfig.session,
-      persist: process.env['MONEY_MANAGER_SESSION_PERSIST'] === 'true',
-      cookieFile: DEFAULT_CONFIG.session?.cookieFile ?? '.session-cookies.json',
+      persist: process.env["MONEY_MANAGER_SESSION_PERSIST"] === "true",
+      cookieFile: DEFAULT_CONFIG.session?.cookieFile ?? ".session-cookies.json",
     };
   }
 
@@ -150,7 +164,10 @@ function loadEnvConfig(): Partial<Config> {
 /**
  * Deep merges configuration objects
  */
-function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
+function deepMerge<T extends Record<string, unknown>>(
+  target: T,
+  source: Partial<T>,
+): T {
   const result = { ...target };
 
   for (const key in source) {
@@ -160,15 +177,15 @@ function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial
 
       if (
         sourceValue !== null &&
-        typeof sourceValue === 'object' &&
+        typeof sourceValue === "object" &&
         !Array.isArray(sourceValue) &&
         targetValue !== null &&
-        typeof targetValue === 'object' &&
+        typeof targetValue === "object" &&
         !Array.isArray(targetValue)
       ) {
         result[key] = deepMerge(
           targetValue as Record<string, unknown>,
-          sourceValue as Record<string, unknown>
+          sourceValue as Record<string, unknown>,
         ) as T[Extract<keyof T, string>];
       } else if (sourceValue !== undefined) {
         result[key] = sourceValue as T[Extract<keyof T, string>];
@@ -186,7 +203,7 @@ let cachedConfig: Config | null = null;
 
 /**
  * Loads and validates the complete configuration
- * 
+ *
  * Configuration sources (in order of priority, highest first):
  * 1. Environment variables
  * 2. Configuration file (.money-manager-mcp.json)
@@ -204,7 +221,7 @@ export async function loadConfig(): Promise<Config> {
   // Merge configurations (env > file > defaults)
   const mergedConfig = deepMerge(
     deepMerge(DEFAULT_CONFIG as Config, fileConfig as Config),
-    envConfig as Config
+    envConfig as Config,
   );
 
   // Validate the merged configuration
@@ -212,8 +229,8 @@ export async function loadConfig(): Promise<Config> {
 
   if (!validationResult.success) {
     const errorMessages = validationResult.error.errors
-      .map((err) => `${err.path.join('.')}: ${err.message}`)
-      .join(', ');
+      .map((err) => `${err.path.join(".")}: ${err.message}`)
+      .join(", ");
     throw new Error(`Configuration validation failed: ${errorMessages}`);
   }
 
@@ -229,7 +246,7 @@ export async function loadConfig(): Promise<Config> {
  */
 export function getConfig(): Config {
   if (!cachedConfig) {
-    throw new Error('Configuration not loaded. Call loadConfig() first.');
+    throw new Error("Configuration not loaded. Call loadConfig() first.");
   }
   return cachedConfig;
 }
@@ -247,22 +264,22 @@ export function resetConfig(): void {
 export function createSampleConfigFile(outputPath?: string): void {
   const sampleConfig = {
     server: {
-      baseUrl: 'http://your-server-ip:port',
+      baseUrl: "http://your-server-ip:port",
       timeout: 30000,
       retryCount: 3,
       retryDelay: 1000,
     },
     session: {
       persist: true,
-      cookieFile: '.session-cookies.json',
+      cookieFile: ".session-cookies.json",
     },
     logging: {
-      level: 'info',
-      format: 'json',
+      level: "info",
+      format: "json",
     },
     defaults: {
-      mbid: 'default',
-      dateFormat: 'YYYY-MM-DD',
+      mbid: "default",
+      dateFormat: "YYYY-MM-DD",
     },
   };
 

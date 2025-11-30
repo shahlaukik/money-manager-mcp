@@ -1,18 +1,18 @@
-import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
-import { wrapper } from 'axios-cookiejar-support';
-import { CookieJar } from 'tough-cookie';
-import * as fs from 'fs';
-import * as path from 'path';
-import { parseStringPromise } from 'xml2js';
+import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import { wrapper } from "axios-cookiejar-support";
+import { CookieJar } from "tough-cookie";
+import * as fs from "fs";
+import * as path from "path";
+import { parseStringPromise } from "xml2js";
 
-import type { Config } from '../config/index.js';
+import type { Config } from "../config/index.js";
 import {
   NetworkError,
   APIError,
   SessionError,
   wrapError,
   type McpError,
-} from '../errors/index.js';
+} from "../errors/index.js";
 
 /**
  * HTTP client with cookie/session management for Money Manager API
@@ -40,34 +40,40 @@ export class HttpClient {
       baseURL: `${config.server.baseUrl}/moneyBook`,
       timeout: config.server.timeout,
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json, text/xml, */*',
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json, text/xml, */*",
       },
       withCredentials: true,
     });
 
     // Wrap axios with cookie jar support
     this.client = wrapper(axiosInstance);
-    
+
     // Set the cookie jar on the instance
     (this.client.defaults as { jar?: CookieJar }).jar = this.cookieJar;
 
     // Add request interceptor for logging
     this.client.interceptors.request.use(
       (requestConfig) => {
-        this.log('debug', `Request: ${requestConfig.method?.toUpperCase()} ${requestConfig.url}`);
+        this.log(
+          "debug",
+          `Request: ${requestConfig.method?.toUpperCase()} ${requestConfig.url}`,
+        );
         return requestConfig;
       },
       (error: unknown) => {
-        this.log('error', 'Request error:', error);
+        this.log("error", "Request error:", error);
         return Promise.reject(error);
-      }
+      },
     );
 
     // Add response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => {
-        this.log('debug', `Response: ${response.status} ${response.statusText}`);
+        this.log(
+          "debug",
+          `Response: ${response.status} ${response.statusText}`,
+        );
         // Persist cookies after successful response
         if (this.config.session?.persist) {
           this.saveCookies();
@@ -76,7 +82,7 @@ export class HttpClient {
       },
       async (error: unknown) => {
         return this.handleResponseError(error);
-      }
+      },
     );
   }
 
@@ -87,14 +93,14 @@ export class HttpClient {
    */
   async get<T>(
     endpoint: string,
-    params?: Record<string, string | number | undefined>
+    params?: Record<string, string | number | undefined>,
   ): Promise<T> {
     const filteredParams = this.filterUndefinedParams(params);
     const response = await this.executeWithRetry<string>(() =>
       this.client.get<string>(endpoint, {
         params: filteredParams,
-        responseType: 'text',
-      })
+        responseType: "text",
+      }),
     );
     return this.parseJsLiteralResponse<T>(response.data);
   }
@@ -104,17 +110,17 @@ export class HttpClient {
    */
   async getXml<T>(
     endpoint: string,
-    params?: Record<string, string | number | undefined>
+    params?: Record<string, string | number | undefined>,
   ): Promise<T> {
     const filteredParams = this.filterUndefinedParams(params);
     const response = await this.executeWithRetry<string>(() =>
       this.client.get<string>(endpoint, {
         params: filteredParams,
-        responseType: 'text',
+        responseType: "text",
         headers: {
-          Accept: 'text/xml',
+          Accept: "text/xml",
         },
-      })
+      }),
     );
     return this.parseXmlResponse<T>(response.data);
   }
@@ -124,15 +130,12 @@ export class HttpClient {
    * Note: The API returns JavaScript object literal syntax (not valid JSON),
    * so we need to parse it accordingly.
    */
-  async post<T>(
-    endpoint: string,
-    data?: Record<string, unknown>
-  ): Promise<T> {
+  async post<T>(endpoint: string, data?: Record<string, unknown>): Promise<T> {
     const formData = this.toFormData(data);
     const response = await this.executeWithRetry<string>(() =>
       this.client.post<string>(endpoint, formData, {
-        responseType: 'text',
-      })
+        responseType: "text",
+      }),
     );
     return this.parseJsLiteralResponse<T>(response.data);
   }
@@ -143,13 +146,13 @@ export class HttpClient {
   async downloadFile(
     endpoint: string,
     outputPath: string,
-    data?: Record<string, unknown>
+    data?: Record<string, unknown>,
   ): Promise<{ filePath: string; fileSize: number }> {
     const formData = this.toFormData(data);
     const response = await this.executeWithRetry<ArrayBuffer>(() =>
       this.client.post<ArrayBuffer>(endpoint, formData, {
-        responseType: 'arraybuffer',
-      })
+        responseType: "arraybuffer",
+      }),
     );
 
     // Ensure directory exists
@@ -174,14 +177,14 @@ export class HttpClient {
   async downloadFileGet(
     endpoint: string,
     outputPath: string,
-    params?: Record<string, string | number | undefined>
+    params?: Record<string, string | number | undefined>,
   ): Promise<{ filePath: string; fileSize: number }> {
     const filteredParams = this.filterUndefinedParams(params);
     const response = await this.executeWithRetry<ArrayBuffer>(() =>
       this.client.get<ArrayBuffer>(endpoint, {
         params: filteredParams,
-        responseType: 'arraybuffer',
-      })
+        responseType: "arraybuffer",
+      }),
     );
 
     // Ensure directory exists
@@ -206,20 +209,20 @@ export class HttpClient {
   async uploadFile<T>(
     endpoint: string,
     filePath: string,
-    fieldName: string = 'file'
+    fieldName: string = "file",
   ): Promise<T> {
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found: ${filePath}`);
     }
 
-    const FormData = (await import('form-data')).default;
+    const FormData = (await import("form-data")).default;
     const formData = new FormData();
     formData.append(fieldName, fs.createReadStream(filePath));
 
     const response = await this.executeWithRetry<T>(() =>
       this.client.post<T>(endpoint, formData, {
         headers: formData.getHeaders(),
-      })
+      }),
     );
 
     return response.data;
@@ -242,7 +245,7 @@ export class HttpClient {
    * Executes a request with retry logic
    */
   private async executeWithRetry<T>(
-    requestFn: () => Promise<AxiosResponse<T>>
+    requestFn: () => Promise<AxiosResponse<T>>,
   ): Promise<AxiosResponse<T>> {
     const maxRetries = this.config.server.retryCount;
     let lastError: McpError | undefined;
@@ -262,12 +265,15 @@ export class HttpClient {
 
         // Wait before retrying with exponential backoff
         const delay = this.config.server.retryDelay * Math.pow(2, attempt);
-        this.log('warn', `Request failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        this.log(
+          "warn",
+          `Request failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
+        );
         await this.sleep(delay);
       }
     }
 
-    throw lastError ?? new NetworkError('Request failed after all retries');
+    throw lastError ?? new NetworkError("Request failed after all retries");
   }
 
   /**
@@ -279,22 +285,31 @@ export class HttpClient {
 
       // Network errors (no response)
       if (!axiosError.response) {
-        if (axiosError.code === 'ECONNREFUSED') {
+        if (axiosError.code === "ECONNREFUSED") {
           throw NetworkError.connectionRefused(this.config.server.baseUrl);
         }
-        if (axiosError.code === 'ETIMEDOUT' || axiosError.code === 'ECONNABORTED') {
-          const url = axiosError.config?.url ?? 'unknown';
-          
+        if (
+          axiosError.code === "ETIMEDOUT" ||
+          axiosError.code === "ECONNABORTED"
+        ) {
+          const url = axiosError.config?.url ?? "unknown";
+
           // Check if this is a transaction list request - provide a more helpful error message
           // because the Money Manager server has a known bug where it hangs on empty date ranges
-          if (url.includes('/getDataByPeriod')) {
-            throw NetworkError.timeoutForTransactionList(url, this.config.server.timeout);
+          if (url.includes("/getDataByPeriod")) {
+            throw NetworkError.timeoutForTransactionList(
+              url,
+              this.config.server.timeout,
+            );
           }
-          
+
           throw NetworkError.timeout(url, this.config.server.timeout);
         }
-        if (axiosError.code === 'ENOTFOUND') {
-          throw NetworkError.unreachable(this.config.server.baseUrl, axiosError.message);
+        if (axiosError.code === "ENOTFOUND") {
+          throw NetworkError.unreachable(
+            this.config.server.baseUrl,
+            axiosError.message,
+          );
         }
         throw new NetworkError(axiosError.message, { code: axiosError.code });
       }
@@ -319,22 +334,22 @@ export class HttpClient {
    */
   private async parseXmlResponse<T>(xmlString: string): Promise<T> {
     // Handle empty or whitespace-only responses
-    if (!xmlString || xmlString.trim() === '') {
+    if (!xmlString || xmlString.trim() === "") {
       return {} as T;
     }
-    
+
     try {
       const result = await parseStringPromise(xmlString, {
         explicitArray: false,
         ignoreAttrs: true,
         trim: true,
       });
-      
+
       // Handle case where result is null/undefined
       if (result === null || result === undefined) {
         return {} as T;
       }
-      
+
       return result as T;
     } catch (error) {
       throw new APIError(`Failed to parse XML response: ${String(error)}`);
@@ -347,7 +362,7 @@ export class HttpClient {
    * unquoted property names) instead of valid JSON.
    */
   private parseJsLiteralResponse<T>(responseText: string): T {
-    if (!responseText || responseText.trim() === '') {
+    if (!responseText || responseText.trim() === "") {
       return {} as T;
     }
 
@@ -366,10 +381,14 @@ export class HttpClient {
           // Wrap in parentheses to make it an expression
           const fn = new Function(`return (${responseText});`);
           return fn() as T;
-        } catch (evalError) {
-          this.log('error', 'Failed to parse response:', responseText.substring(0, 200));
+        } catch {
+          this.log(
+            "error",
+            "Failed to parse response:",
+            responseText.substring(0, 200),
+          );
           throw new APIError(
-            `Failed to parse API response: ${String(conversionError)}`
+            `Failed to parse API response: ${String(conversionError)}`,
           );
         }
       }
@@ -392,15 +411,12 @@ export class HttpClient {
     // Match property names that are not already quoted
     // Pattern: start of object/array or comma, followed by identifier and colon
     result = result.replace(
-      /([{,\[])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g,
-      '$1"$2":'
+      /([{,\[])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, // eslint-disable-line no-useless-escape
+      '$1"$2":',
     );
 
     // Step 3: Handle property names at the start of the string (for nested objects)
-    result = result.replace(
-      /^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/gm,
-      '"$1":'
-    );
+    result = result.replace(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/gm, '"$1":');
 
     // Step 4: Clean up any double-double quotes that might have been created
     result = result.replace(/""/g, '"');
@@ -412,7 +428,7 @@ export class HttpClient {
    * Converts an object to URL-encoded form data
    */
   private toFormData(data?: Record<string, unknown>): string {
-    if (!data) return '';
+    if (!data) return "";
 
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(data)) {
@@ -427,7 +443,7 @@ export class HttpClient {
    * Filters out undefined values from params object
    */
   private filterUndefinedParams(
-    params?: Record<string, string | number | undefined>
+    params?: Record<string, string | number | undefined>,
   ): Record<string, string | number> | undefined {
     if (!params) return undefined;
 
@@ -446,7 +462,7 @@ export class HttpClient {
   private getCookiePath(): string {
     return path.resolve(
       process.cwd(),
-      this.config.session?.cookieFile ?? '.session-cookies.json'
+      this.config.session?.cookieFile ?? ".session-cookies.json",
     );
   }
 
@@ -457,13 +473,13 @@ export class HttpClient {
     const cookiePath = this.getCookiePath();
     if (fs.existsSync(cookiePath)) {
       try {
-        const cookieData = fs.readFileSync(cookiePath, 'utf-8');
+        const cookieData = fs.readFileSync(cookiePath, "utf-8");
         const cookies = JSON.parse(cookieData);
-        if (cookies && typeof cookies === 'object') {
+        if (cookies && typeof cookies === "object") {
           this.cookieJar = CookieJar.deserializeSync(cookies);
         }
       } catch (error) {
-        this.log('warn', `Failed to load cookies from ${cookiePath}:`, error);
+        this.log("warn", `Failed to load cookies from ${cookiePath}:`, error);
       }
     }
   }
@@ -477,7 +493,7 @@ export class HttpClient {
       const serialized = this.cookieJar.serializeSync();
       fs.writeFileSync(cookiePath, JSON.stringify(serialized, null, 2));
     } catch (error) {
-      this.log('warn', `Failed to save cookies to ${cookiePath}:`, error);
+      this.log("warn", `Failed to save cookies to ${cookiePath}:`, error);
     }
   }
 
@@ -492,25 +508,31 @@ export class HttpClient {
    * Logs a message based on configured log level
    * Note: Uses console.error to avoid corrupting MCP stdio transport
    */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: unknown[]): void {
-    const configLevel = this.config.logging?.level ?? 'info';
-    const levels = ['debug', 'info', 'warn', 'error'];
+  private log(
+    level: "debug" | "info" | "warn" | "error",
+    message: string,
+    ...args: unknown[]
+  ): void {
+    const configLevel = this.config.logging?.level ?? "info";
+    const levels = ["debug", "info", "warn", "error"];
     const configLevelIndex = levels.indexOf(configLevel);
     const messageLevelIndex = levels.indexOf(level);
 
     if (messageLevelIndex >= configLevelIndex) {
       const timestamp = new Date().toISOString();
       const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
-      
+
       // Use console.error (stderr) instead of console.log (stdout)
       // because MCP uses stdout for JSON-RPC communication
-      if (this.config.logging?.format === 'json') {
-        console.error(JSON.stringify({
-          timestamp,
-          level,
-          message,
-          args: args.length > 0 ? args : undefined,
-        }));
+      if (this.config.logging?.format === "json") {
+        console.error(
+          JSON.stringify({
+            timestamp,
+            level,
+            message,
+            args: args.length > 0 ? args : undefined,
+          }),
+        );
       } else {
         console.error(prefix, message, ...args);
       }

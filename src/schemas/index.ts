@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Zod schemas for input validation
@@ -14,42 +14,46 @@ import { z } from 'zod';
  */
 export const DateSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format');
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 
 /**
  * Non-empty string
  */
-export const NonEmptyString = z.string().min(1, 'String cannot be empty');
+export const NonEmptyString = z.string().min(1, "String cannot be empty");
 
 /**
  * Positive number
  */
-export const PositiveNumber = z.number().positive('Number must be positive');
+export const PositiveNumber = z.number().positive("Number must be positive");
 
 /**
  * Non-negative number (zero or positive)
  */
-export const NonNegativeNumber = z.number().min(0, 'Number must be non-negative');
+export const NonNegativeNumber = z
+  .number()
+  .min(0, "Number must be non-negative");
 
 /**
  * Money book ID
  */
-export const MbidSchema = z.string().min(1, 'Money book ID is required');
+export const MbidSchema = z.string().min(1, "Money book ID is required");
 
 /**
  * Asset ID
  */
-export const AssetIdSchema = z.string().min(1, 'Asset ID is required');
+export const AssetIdSchema = z.string().min(1, "Asset ID is required");
 
 /**
  * Transaction ID
  */
-export const TransactionIdSchema = z.string().min(1, 'Transaction ID is required');
+export const TransactionIdSchema = z
+  .string()
+  .min(1, "Transaction ID is required");
 
 /**
  * Category ID
  */
-export const CategoryIdSchema = z.string().min(1, 'Category ID is required');
+export const CategoryIdSchema = z.string().min(1, "Category ID is required");
 
 // ============================================================================
 // Initialization Schemas
@@ -71,14 +75,18 @@ export type InitGetDataInput = z.infer<typeof InitGetDataInputSchema>;
 /**
  * Income/Expense code
  */
-export const InOutCodeSchema = z.enum(['0', '1'], {
-  errorMap: () => ({ message: "inOutCode must be '0' (Income) or '1' (Expense)" }),
+export const InOutCodeSchema = z.enum(["0", "1"], {
+  errorMap: () => ({
+    message: "inOutCode must be '0' (Income) or '1' (Expense)",
+  }),
 });
 
 /**
  * Extended income/expense code for updates (includes transfer codes)
  */
-export const ExtendedInOutCodeSchema = z.string().regex(/^[0-8]$/, 'inOutCode must be 0-8');
+export const ExtendedInOutCodeSchema = z
+  .string()
+  .regex(/^[0-8]$/, "inOutCode must be 0-8");
 
 /**
  * Input schema for transaction_list tool
@@ -110,7 +118,9 @@ export const TransactionCreateInputSchema = z.object({
   mbDetailContent: z.string().optional(),
 });
 
-export type TransactionCreateInput = z.infer<typeof TransactionCreateInputSchema>;
+export type TransactionCreateInput = z.infer<
+  typeof TransactionCreateInputSchema
+>;
 
 /**
  * Input schema for transaction_update tool
@@ -131,16 +141,22 @@ export const TransactionUpdateInputSchema = z.object({
   mbDetailContent: z.string().optional(),
 });
 
-export type TransactionUpdateInput = z.infer<typeof TransactionUpdateInputSchema>;
+export type TransactionUpdateInput = z.infer<
+  typeof TransactionUpdateInputSchema
+>;
 
 /**
  * Input schema for transaction_delete tool
  */
 export const TransactionDeleteInputSchema = z.object({
-  ids: z.array(TransactionIdSchema).min(1, 'At least one transaction ID is required'),
+  ids: z
+    .array(TransactionIdSchema)
+    .min(1, "At least one transaction ID is required"),
 });
 
-export type TransactionDeleteInput = z.infer<typeof TransactionDeleteInputSchema>;
+export type TransactionDeleteInput = z.infer<
+  typeof TransactionDeleteInputSchema
+>;
 
 // ============================================================================
 // Summary Schemas
@@ -168,7 +184,9 @@ export const SummaryExportExcelInputSchema = z.object({
   outputPath: NonEmptyString,
 });
 
-export type SummaryExportExcelInput = z.infer<typeof SummaryExportExcelInputSchema>;
+export type SummaryExportExcelInput = z.infer<
+  typeof SummaryExportExcelInputSchema
+>;
 
 // ============================================================================
 // Asset Schemas
@@ -309,7 +327,9 @@ export type TransferUpdateInput = z.infer<typeof TransferUpdateInputSchema>;
  */
 export const DashboardGetOverviewInputSchema = z.object({});
 
-export type DashboardGetOverviewInput = z.infer<typeof DashboardGetOverviewInputSchema>;
+export type DashboardGetOverviewInput = z.infer<
+  typeof DashboardGetOverviewInputSchema
+>;
 
 /**
  * Input schema for dashboard_get_asset_chart tool
@@ -318,7 +338,9 @@ export const DashboardGetAssetChartInputSchema = z.object({
   assetId: AssetIdSchema,
 });
 
-export type DashboardGetAssetChartInput = z.infer<typeof DashboardGetAssetChartInputSchema>;
+export type DashboardGetAssetChartInput = z.infer<
+  typeof DashboardGetAssetChartInputSchema
+>;
 
 // ============================================================================
 // Backup Schemas
@@ -397,7 +419,7 @@ export type ToolName = keyof typeof ToolSchemas;
  */
 export function validateToolInput<T extends ToolName>(
   toolName: T,
-  input: unknown
+  input: unknown,
 ): z.infer<(typeof ToolSchemas)[T]> {
   const schema = ToolSchemas[toolName];
   return schema.parse(input);
@@ -408,7 +430,7 @@ export function validateToolInput<T extends ToolName>(
  */
 export function safeValidateToolInput<T extends ToolName>(
   toolName: T,
-  input: unknown
+  input: unknown,
 ): z.SafeParseReturnType<unknown, z.infer<(typeof ToolSchemas)[T]>> {
   const schema = ToolSchemas[toolName];
   return schema.safeParse(input);

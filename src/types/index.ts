@@ -11,13 +11,13 @@
  * Transaction type codes used by the API
  */
 export enum InOutCode {
-  INCOME = '0',
-  EXPENSE = '1',
-  UNKNOWN = '2',
-  TRANSFER_OUT = '3',
-  TRANSFER_IN = '4',
-  CARD_PAYMENT_OUT = '7',
-  CARD_PAYMENT_IN = '8',
+  INCOME = "0",
+  EXPENSE = "1",
+  UNKNOWN = "2",
+  TRANSFER_OUT = "3",
+  TRANSFER_IN = "4",
+  CARD_PAYMENT_OUT = "7",
+  CARD_PAYMENT_IN = "8",
 }
 
 /**
@@ -51,7 +51,7 @@ export interface TransactionCreateInput {
   mcid: string;
   mbCategory: string;
   mbCash: number;
-  inOutCode: '0' | '1';
+  inOutCode: "0" | "1";
   inOutType: string;
   mcscid?: string;
   subCategory?: string;
@@ -103,7 +103,7 @@ export interface TransactionOperationResponse {
 /**
  * Asset type - can be a group or an individual item
  */
-export type AssetType = 'group' | 'item';
+export type AssetType = "group" | "item";
 
 /**
  * Asset record from the API
@@ -125,7 +125,7 @@ export interface Asset {
  */
 export interface AssetGroup {
   assetGroupId: string;
-  assetType: 'group';
+  assetType: "group";
   assetName: string;
   assetMoney: number;
   color?: string;
@@ -192,7 +192,7 @@ export interface CreditCard {
  */
 export interface CardGroup {
   assetGroupId: string;
-  assetType: 'group';
+  assetType: "group";
   assetName: string;
   assetMoney: number;
   notPayMoney: number;
@@ -565,8 +565,8 @@ export interface SessionConfig {
  * Logging configuration
  */
 export interface LoggingConfig {
-  level: 'debug' | 'info' | 'warn' | 'error';
-  format: 'json' | 'text';
+  level: "debug" | "info" | "warn" | "error";
+  format: "json" | "text";
 }
 
 /**

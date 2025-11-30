@@ -42,7 +42,7 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 ## 2. Project Structure
 
-```
+```text
 money-manager-mcp/
 ├── src/
 │   ├── index.ts              # MCP server entry point
@@ -184,12 +184,12 @@ The Money Manager API returns HTML-based `.xls` files (not true XLSX format). Th
 
 ```typescript
 enum ErrorCategory {
-    NETWORK = "NETWORK", // Connection failures, timeouts
-    API = "API", // API returned error response
-    VALIDATION = "VALIDATION", // Input validation failures
-    SESSION = "SESSION", // Authentication/session issues
-    FILE = "FILE", // File system errors
-    INTERNAL = "INTERNAL", // Unexpected errors
+  NETWORK = "NETWORK", // Connection failures, timeouts
+  API = "API", // API returned error response
+  VALIDATION = "VALIDATION", // Input validation failures
+  SESSION = "SESSION", // Authentication/session issues
+  FILE = "FILE", // File system errors
+  INTERNAL = "INTERNAL", // Unexpected errors
 }
 ```
 
@@ -197,11 +197,11 @@ enum ErrorCategory {
 
 ```typescript
 interface McpError {
-    code: string; // Error code (e.g., "NETWORK_TIMEOUT")
-    category: ErrorCategory; // Error category
-    message: string; // Human-readable message
-    details?: Record<string, any>; // Additional context
-    retryable: boolean; // Whether retry might succeed
+  code: string; // Error code (e.g., "NETWORK_TIMEOUT")
+  category: ErrorCategory; // Error category
+  message: string; // Human-readable message
+  details?: Record<string, any>; // Additional context
+  retryable: boolean; // Whether retry might succeed
 }
 ```
 
@@ -247,7 +247,7 @@ interface McpError {
 
 ## 8. Data Flow
 
-```
+```text
 ┌─────────────────┐
 │   AI Assistant  │
 │ (Claude/Copilot)│
@@ -287,33 +287,33 @@ interface McpError {
 ```typescript
 // Transaction
 interface Transaction {
-    id: string;
-    mbDate: string;
-    assetId: string;
-    payType: string;
-    mcid: string;
-    mbCategory: string;
-    mbCash: number;
-    inOutCode: string;
-    inOutType: string;
-    // ... optional fields
+  id: string;
+  mbDate: string;
+  assetId: string;
+  payType: string;
+  mcid: string;
+  mbCategory: string;
+  mbCash: number;
+  inOutCode: string;
+  inOutType: string;
+  // ... optional fields
 }
 
 // Asset
 interface Asset {
-    assetId: string;
-    assetGroupId: string;
-    assetType: "group" | "item";
-    assetName: string;
-    assetMoney: number;
-    children?: Asset[];
+  assetId: string;
+  assetGroupId: string;
+  assetType: "group" | "item";
+  assetName: string;
+  assetMoney: number;
+  children?: Asset[];
 }
 
 // Category
 interface Category {
-    mcid: string;
-    mcname: string;
-    mcsc?: SubCategory[];
+  mcid: string;
+  mcname: string;
+  mcsc?: SubCategory[];
 }
 ```
 

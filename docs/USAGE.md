@@ -337,7 +337,7 @@ Retrieves historical chart data for a specific asset.
 
 ### Monthly Budget Review
 
-```
+```text
 1. "Show my spending summary for November"
 2. "Which category had the highest expenses?"
 3. "List my food-related transactions this month"
@@ -346,7 +346,7 @@ Retrieves historical chart data for a specific asset.
 
 ### Recording Daily Expenses
 
-```
+```text
 1. "Record a $45 grocery expense at Walmart today"
 2. "Add a $12 lunch expense from my credit card"
 3. "Log a $50 gas expense with note 'weekly fill-up'"
@@ -354,7 +354,7 @@ Retrieves historical chart data for a specific asset.
 
 ### Account Management
 
-```
+```text
 1. "What are my current account balances?"
 2. "Transfer $200 from checking to savings"
 3. "Show my savings account balance history"
@@ -362,7 +362,7 @@ Retrieves historical chart data for a specific asset.
 
 ### End of Month Review
 
-```
+```text
 1. "Show my income vs expenses for this month"
 2. "What's my current net worth?"
 3. "Export this month's data to Excel for my records"

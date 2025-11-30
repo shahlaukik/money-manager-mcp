@@ -2,12 +2,12 @@
  * Error categories for the Money Manager MCP server
  */
 export enum ErrorCategory {
-  NETWORK = 'NETWORK',
-  API = 'API',
-  VALIDATION = 'VALIDATION',
-  SESSION = 'SESSION',
-  FILE = 'FILE',
-  INTERNAL = 'INTERNAL',
+  NETWORK = "NETWORK",
+  API = "API",
+  VALIDATION = "VALIDATION",
+  SESSION = "SESSION",
+  FILE = "FILE",
+  INTERNAL = "INTERNAL",
 }
 
 /**
@@ -35,10 +35,10 @@ export class McpError extends Error implements McpErrorDetails {
     category: ErrorCategory,
     message: string,
     retryable: boolean = false,
-    details?: Record<string, unknown>
+    details?: Record<string, unknown>,
   ) {
     super(message);
-    this.name = 'McpError';
+    this.name = "McpError";
     this.code = code;
     this.category = category;
     this.retryable = retryable;
@@ -46,7 +46,10 @@ export class McpError extends Error implements McpErrorDetails {
 
     // Maintains proper stack trace for where error was thrown (V8 engines)
     const ErrorWithCapture = Error as typeof Error & {
-      captureStackTrace?: (targetObject: object, constructorOpt?: Function) => void;
+      captureStackTrace?: (
+        targetObject: object,
+        constructorOpt?: (...args: unknown[]) => unknown,
+      ) => void;
     };
     if (ErrorWithCapture.captureStackTrace) {
       ErrorWithCapture.captureStackTrace(this, McpError);
@@ -72,16 +75,16 @@ export class McpError extends Error implements McpErrorDetails {
  */
 export class NetworkError extends McpError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super('NETWORK_ERROR', ErrorCategory.NETWORK, message, true, details);
-    this.name = 'NetworkError';
+    super("NETWORK_ERROR", ErrorCategory.NETWORK, message, true, details);
+    this.name = "NetworkError";
   }
 
   static timeout(url: string, timeoutMs: number, hint?: string): NetworkError {
-    let message = `Request to ${url} timed out after ${timeoutMs}ms`;
+    const message = `Request to ${url} timed out after ${timeoutMs}ms`;
     return new NetworkError(message, {
       url,
       timeoutMs,
-      errorType: 'TIMEOUT',
+      errorType: "TIMEOUT",
       hint,
     });
   }
@@ -89,28 +92,34 @@ export class NetworkError extends McpError {
   /**
    * Creates a timeout error with a specific hint for transaction_list queries
    */
-  static timeoutForTransactionList(url: string, timeoutMs: number): NetworkError {
+  static timeoutForTransactionList(
+    url: string,
+    timeoutMs: number,
+  ): NetworkError {
     return NetworkError.timeout(
       url,
       timeoutMs,
-      'Note: The Money Manager server may hang when querying date ranges with no transactions. ' +
-      'This is a known server-side limitation. Try a date range that has recorded transactions.'
+      "Note: The Money Manager server may hang when querying date ranges with no transactions. " +
+        "This is a known server-side limitation. Try a date range that has recorded transactions.",
     );
   }
 
   static connectionRefused(url: string): NetworkError {
     return new NetworkError(`Connection refused to ${url}`, {
       url,
-      errorType: 'CONNECTION_REFUSED',
+      errorType: "CONNECTION_REFUSED",
     });
   }
 
   static unreachable(url: string, originalError?: string): NetworkError {
-    return new NetworkError(`Cannot connect to Money Manager server at ${url}`, {
-      url,
-      originalError,
-      errorType: 'UNREACHABLE',
-    });
+    return new NetworkError(
+      `Cannot connect to Money Manager server at ${url}`,
+      {
+        url,
+        originalError,
+        errorType: "UNREACHABLE",
+      },
+    );
   }
 }
 
@@ -123,14 +132,14 @@ export class APIError extends McpError {
   constructor(
     message: string,
     statusCode?: number,
-    details?: Record<string, unknown>
+    details?: Record<string, unknown>,
   ) {
     const retryable = statusCode !== undefined && statusCode >= 500;
-    super('API_ERROR', ErrorCategory.API, message, retryable, {
+    super("API_ERROR", ErrorCategory.API, message, retryable, {
       ...details,
       statusCode,
     });
-    this.name = 'APIError';
+    this.name = "APIError";
     this.statusCode = statusCode;
   }
 
@@ -151,16 +160,17 @@ export class APIError extends McpError {
 
   static fromStatusCode(statusCode: number, message?: string): APIError {
     const defaultMessages: Record<number, string> = {
-      400: 'Bad Request',
-      401: 'Unauthorized',
-      403: 'Forbidden',
-      404: 'Not Found',
-      500: 'Internal Server Error',
-      502: 'Bad Gateway',
-      503: 'Service Unavailable',
+      400: "Bad Request",
+      401: "Unauthorized",
+      403: "Forbidden",
+      404: "Not Found",
+      500: "Internal Server Error",
+      502: "Bad Gateway",
+      503: "Service Unavailable",
     };
 
-    const errorMessage = message ?? defaultMessages[statusCode] ?? 'Unknown Error';
+    const errorMessage =
+      message ?? defaultMessages[statusCode] ?? "Unknown Error";
     return new APIError(errorMessage, statusCode);
   }
 }
@@ -177,14 +187,14 @@ export class ValidationError extends McpError {
     message: string,
     field?: string,
     expected?: string,
-    received?: unknown
+    received?: unknown,
   ) {
-    super('VALIDATION_ERROR', ErrorCategory.VALIDATION, message, false, {
+    super("VALIDATION_ERROR", ErrorCategory.VALIDATION, message, false, {
       field,
       expected,
       received,
     });
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
     this.field = field;
     this.expected = expected;
     this.received = received;
@@ -193,13 +203,13 @@ export class ValidationError extends McpError {
   static invalidField(
     field: string,
     expected: string,
-    received: unknown
+    received: unknown,
   ): ValidationError {
     return new ValidationError(
       `Invalid value for '${field}': expected ${expected}, received ${JSON.stringify(received)}`,
       field,
       expected,
-      received
+      received,
     );
   }
 
@@ -207,29 +217,35 @@ export class ValidationError extends McpError {
     return new ValidationError(
       `Required field '${field}' is missing`,
       field,
-      'required',
-      undefined
+      "required",
+      undefined,
     );
   }
 
-  static invalidFormat(field: string, format: string, value: string): ValidationError {
+  static invalidFormat(
+    field: string,
+    format: string,
+    value: string,
+  ): ValidationError {
     return new ValidationError(
       `Invalid format for '${field}': expected ${format}`,
       field,
       format,
-      value
+      value,
     );
   }
 
-  static fromZodError(zodError: { errors: Array<{ path: (string | number)[]; message: string }> }): ValidationError {
+  static fromZodError(zodError: {
+    errors: Array<{ path: (string | number)[]; message: string }>;
+  }): ValidationError {
     const firstError = zodError.errors[0];
     if (!firstError) {
-      return new ValidationError('Validation failed');
+      return new ValidationError("Validation failed");
     }
-    const field = firstError.path.join('.');
+    const field = firstError.path.join(".");
     return new ValidationError(
       `Validation failed for '${field}': ${firstError.message}`,
-      field
+      field,
     );
   }
 }
@@ -239,20 +255,22 @@ export class ValidationError extends McpError {
  */
 export class SessionError extends McpError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super('SESSION_ERROR', ErrorCategory.SESSION, message, true, details);
-    this.name = 'SessionError';
+    super("SESSION_ERROR", ErrorCategory.SESSION, message, true, details);
+    this.name = "SessionError";
   }
 
   static expired(): SessionError {
-    return new SessionError('Session has expired. Please reconnect.');
+    return new SessionError("Session has expired. Please reconnect.");
   }
 
   static invalid(): SessionError {
-    return new SessionError('Invalid session. Please reconnect.');
+    return new SessionError("Invalid session. Please reconnect.");
   }
 
   static unauthorized(): SessionError {
-    return new SessionError('Unauthorized access. Please check your credentials.');
+    return new SessionError(
+      "Unauthorized access. Please check your credentials.",
+    );
   }
 }
 
@@ -262,39 +280,47 @@ export class SessionError extends McpError {
 export class FileError extends McpError {
   public readonly filePath?: string;
 
-  constructor(message: string, filePath?: string, details?: Record<string, unknown>) {
-    super('FILE_ERROR', ErrorCategory.FILE, message, false, {
+  constructor(
+    message: string,
+    filePath?: string,
+    details?: Record<string, unknown>,
+  ) {
+    super("FILE_ERROR", ErrorCategory.FILE, message, false, {
       ...details,
       filePath,
     });
-    this.name = 'FileError';
+    this.name = "FileError";
     this.filePath = filePath;
   }
 
   static readFailed(filePath: string, originalError?: string): FileError {
     return new FileError(`Cannot read file at '${filePath}'`, filePath, {
       originalError,
-      operation: 'read',
+      operation: "read",
     });
   }
 
   static writeFailed(filePath: string, originalError?: string): FileError {
     return new FileError(`Cannot write file to '${filePath}'`, filePath, {
       originalError,
-      operation: 'write',
+      operation: "write",
     });
   }
 
   static notFound(filePath: string): FileError {
     return new FileError(`File not found: '${filePath}'`, filePath, {
-      operation: 'access',
+      operation: "access",
     });
   }
 
   static permissionDenied(filePath: string): FileError {
-    return new FileError(`Permission denied for file: '${filePath}'`, filePath, {
-      operation: 'access',
-    });
+    return new FileError(
+      `Permission denied for file: '${filePath}'`,
+      filePath,
+      {
+        operation: "access",
+      },
+    );
   }
 }
 
@@ -303,19 +329,19 @@ export class FileError extends McpError {
  */
 export class InternalError extends McpError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super('INTERNAL_ERROR', ErrorCategory.INTERNAL, message, false, details);
-    this.name = 'InternalError';
+    super("INTERNAL_ERROR", ErrorCategory.INTERNAL, message, false, details);
+    this.name = "InternalError";
   }
 
   static unexpected(originalError?: Error): InternalError {
     return new InternalError(
-      'An unexpected error occurred',
+      "An unexpected error occurred",
       originalError
         ? {
             originalError: originalError.message,
             stack: originalError.stack,
           }
-        : undefined
+        : undefined,
     );
   }
 
@@ -344,14 +370,17 @@ export function wrapError(error: unknown): McpError {
   if (error instanceof Error) {
     // Check for common network error codes
     const errorWithCode = error as Error & { code?: string };
-    if (errorWithCode.code === 'ECONNREFUSED') {
-      return NetworkError.connectionRefused('unknown');
+    if (errorWithCode.code === "ECONNREFUSED") {
+      return NetworkError.connectionRefused("unknown");
     }
-    if (errorWithCode.code === 'ETIMEDOUT' || errorWithCode.code === 'ECONNABORTED') {
-      return NetworkError.timeout('unknown', 0);
+    if (
+      errorWithCode.code === "ETIMEDOUT" ||
+      errorWithCode.code === "ECONNABORTED"
+    ) {
+      return NetworkError.timeout("unknown", 0);
     }
-    if (errorWithCode.code === 'ENOTFOUND') {
-      return NetworkError.unreachable('unknown', error.message);
+    if (errorWithCode.code === "ENOTFOUND") {
+      return NetworkError.unreachable("unknown", error.message);
     }
 
     return InternalError.unexpected(error);

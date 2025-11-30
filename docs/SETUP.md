@@ -9,10 +9,10 @@ This guide covers installation and configuration of the Money Manager MCP server
 - **Realbyte Money Manager** app with web server enabled
 - Your phone and computer on the **same Wi-Fi network**
 - An MCP-compatible client:
-    - Claude Desktop
-    - VS Code with GitHub Copilot
-    - Cursor
-    - Other MCP-compatible AI tools
+  - Claude Desktop
+  - VS Code with GitHub Copilot
+  - Cursor
+  - Other MCP-compatible AI tools
 
 ## Installation
 
@@ -20,28 +20,28 @@ This guide covers installation and configuration of the Money Manager MCP server
 
 1. **Clone the repository:**
 
-    ```bash
-    git clone https://github.com/shahlaukik/money-manager-mcp.git
-    cd money-manager-mcp
-    ```
+   ```bash
+   git clone https://github.com/shahlaukik/money-manager-mcp.git
+   cd money-manager-mcp
+   ```
 
 2. **Install dependencies:**
 
-    ```bash
-    npm install
-    ```
+   ```bash
+   npm install
+   ```
 
 3. **Build the project:**
 
-    ```bash
-    npm run build
-    ```
+   ```bash
+   npm run build
+   ```
 
 4. **Run the server:**
 
-    ```bash
-    npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
-    ```
+   ```bash
+   npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
+   ```
 
 ## Configuration
 
@@ -88,11 +88,11 @@ You can also use a `money-manager-config.json` file:
 
 ```json
 {
-    "baseUrl": "http://your-server-ip:port",
-    "timeout": 30000,
-    "retryCount": 3,
-    "logLevel": "info",
-    "sessionPersist": true
+  "baseUrl": "http://your-server-ip:port",
+  "timeout": 30000,
+  "retryCount": 3,
+  "logLevel": "info",
+  "sessionPersist": true
 }
 ```
 
@@ -108,25 +108,25 @@ Create `.vscode/mcp.json` in your workspace:
 
 ```json
 {
-    "servers": {
-        "money-manager": {
-            "type": "stdio",
-            "command": "npx",
-            "args": [
-                "money-manager-mcp@latest",
-                "--baseUrl",
-                "${input:moneyManager.baseUrl}"
-            ]
-        }
-    },
-    "inputs": [
-        {
-            "id": "moneyManager.baseUrl",
-            "description": "Enter the base URL for the Money Manager API",
-            "type": "promptString",
-            "default": "http://192.168.1.100:7200"
-        }
-    ]
+  "servers": {
+    "money-manager": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "money-manager-mcp@latest",
+        "--baseUrl",
+        "${input:moneyManager.baseUrl}"
+      ]
+    }
+  },
+  "inputs": [
+    {
+      "id": "moneyManager.baseUrl",
+      "description": "Enter the base URL for the Money Manager API",
+      "type": "promptString",
+      "default": "http://192.168.1.100:7200"
+    }
+  ]
 }
 ```
 
@@ -138,17 +138,17 @@ If you prefer not to be prompted each time:
 
 ```json
 {
-    "servers": {
-        "money-manager": {
-            "type": "stdio",
-            "command": "npx",
-            "args": [
-                "money-manager-mcp@latest",
-                "--baseUrl",
-                "http://192.168.1.100:7200"
-            ]
-        }
+  "servers": {
+    "money-manager": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "money-manager-mcp@latest",
+        "--baseUrl",
+        "http://192.168.1.100:7200"
+      ]
     }
+  }
 }
 ```
 
@@ -158,19 +158,19 @@ Add to your VS Code `settings.json` (File > Preferences > Settings > Open Settin
 
 ```json
 {
-    "mcp": {
-        "servers": {
-            "money-manager": {
-                "type": "stdio",
-                "command": "npx",
-                "args": [
-                    "money-manager-mcp@latest",
-                    "--baseUrl",
-                    "http://YOUR_PHONE_IP:PORT"
-                ]
-            }
-        }
+  "mcp": {
+    "servers": {
+      "money-manager": {
+        "type": "stdio",
+        "command": "npx",
+        "args": [
+          "money-manager-mcp@latest",
+          "--baseUrl",
+          "http://YOUR_PHONE_IP:PORT"
+        ]
+      }
     }
+  }
 }
 ```
 
@@ -193,12 +193,16 @@ Add to your Claude Desktop configuration file:
 
 ```json
 {
-    "mcpServers": {
-        "money-manager": {
-            "command": "npx",
-            "args": ["money-manager-mcp@latest", "--baseUrl", "http://YOUR_PHONE_IP:PORT"]
-        }
+  "mcpServers": {
+    "money-manager": {
+      "command": "npx",
+      "args": [
+        "money-manager-mcp@latest",
+        "--baseUrl",
+        "http://YOUR_PHONE_IP:PORT"
+      ]
     }
+  }
 }
 ```
 
@@ -206,15 +210,15 @@ Add to your Claude Desktop configuration file:
 
 ```json
 {
-    "mcpServers": {
-        "money-manager": {
-            "command": "npx",
-            "args": ["money-manager-mcp@latest"],
-            "env": {
-                "MONEY_MANAGER_BASE_URL": "http://YOUR_PHONE_IP:PORT"
-            }
-        }
+  "mcpServers": {
+    "money-manager": {
+      "command": "npx",
+      "args": ["money-manager-mcp@latest"],
+      "env": {
+        "MONEY_MANAGER_BASE_URL": "http://YOUR_PHONE_IP:PORT"
+      }
     }
+  }
 }
 ```
 
@@ -222,12 +226,16 @@ Add to your Claude Desktop configuration file:
 
 ```json
 {
-    "mcpServers": {
-        "money-manager": {
-            "command": "node",
-            "args": ["/absolute/path/to/money-manager-mcp/dist/index.js", "--baseUrl", "http://YOUR_PHONE_IP:PORT"]
-        }
+  "mcpServers": {
+    "money-manager": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/money-manager-mcp/dist/index.js",
+        "--baseUrl",
+        "http://YOUR_PHONE_IP:PORT"
+      ]
     }
+  }
 }
 ```
 
@@ -237,12 +245,16 @@ Add to your Cursor MCP configuration:
 
 ```json
 {
-    "mcpServers": {
-        "money-manager": {
-            "command": "npx",
-            "args": ["money-manager-mcp@latest", "--baseUrl", "http://YOUR_PHONE_IP:PORT"]
-        }
+  "mcpServers": {
+    "money-manager": {
+      "command": "npx",
+      "args": [
+        "money-manager-mcp@latest",
+        "--baseUrl",
+        "http://YOUR_PHONE_IP:PORT"
+      ]
     }
+  }
 }
 ```
 
@@ -285,9 +297,9 @@ In Claude Desktop or VS Code with Copilot:
 2. Restart the application
 3. Ask the AI to use a Money Manager tool:
 
-    ```text
-    Get my Money Manager initialization data
-    ```
+   ```text
+   Get my Money Manager initialization data
+   ```
 
 The AI should invoke the `init_get_data` tool.
 
@@ -342,10 +354,10 @@ Or in your environment configuration:
 
 ```json
 {
-    "env": {
-        "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port",
-        "MONEY_MANAGER_LOG_LEVEL": "debug"
-    }
+  "env": {
+    "MONEY_MANAGER_BASE_URL": "http://your-server-ip:port",
+    "MONEY_MANAGER_LOG_LEVEL": "debug"
+  }
 }
 ```
 
