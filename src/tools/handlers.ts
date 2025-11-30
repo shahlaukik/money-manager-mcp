@@ -175,6 +175,18 @@ export async function handleTransactionList(
 
   const rawResponse = await httpClient.getXml<RawTransactionXmlResponse>('/getDataByPeriod', params);
 
+  // Handle case where response is empty or dataset is missing/empty
+  if (!rawResponse || !rawResponse.dataset) {
+    return { count: 0, transactions: [] };
+  }
+
+  // Handle case where dataset is an empty string (can happen with empty XML elements)
+  // When xml2js parses <dataset results="0"></dataset> with ignoreAttrs:true,
+  // it returns { dataset: "" } instead of { dataset: { results: "0" } }
+  if (typeof rawResponse.dataset === 'string') {
+    return { count: 0, transactions: [] };
+  }
+
   // Parse the XML response
   const count = parseInt(rawResponse.dataset?.results || '0', 10);
   let transactions: Transaction[] = [];

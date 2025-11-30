@@ -76,12 +76,26 @@ export class NetworkError extends McpError {
     this.name = 'NetworkError';
   }
 
-  static timeout(url: string, timeoutMs: number): NetworkError {
-    return new NetworkError(`Request to ${url} timed out after ${timeoutMs}ms`, {
+  static timeout(url: string, timeoutMs: number, hint?: string): NetworkError {
+    let message = `Request to ${url} timed out after ${timeoutMs}ms`;
+    return new NetworkError(message, {
       url,
       timeoutMs,
       errorType: 'TIMEOUT',
+      hint,
     });
+  }
+
+  /**
+   * Creates a timeout error with a specific hint for transaction_list queries
+   */
+  static timeoutForTransactionList(url: string, timeoutMs: number): NetworkError {
+    return NetworkError.timeout(
+      url,
+      timeoutMs,
+      'Note: The Money Manager server may hang when querying date ranges with no transactions. ' +
+      'This is a known server-side limitation. Try a date range that has recorded transactions.'
+    );
   }
 
   static connectionRefused(url: string): NetworkError {

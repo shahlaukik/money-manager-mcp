@@ -283,10 +283,15 @@ export class HttpClient {
           throw NetworkError.connectionRefused(this.config.server.baseUrl);
         }
         if (axiosError.code === 'ETIMEDOUT' || axiosError.code === 'ECONNABORTED') {
-          throw NetworkError.timeout(
-            axiosError.config?.url ?? 'unknown',
-            this.config.server.timeout
-          );
+          const url = axiosError.config?.url ?? 'unknown';
+          
+          // Check if this is a transaction list request - provide a more helpful error message
+          // because the Money Manager server has a known bug where it hangs on empty date ranges
+          if (url.includes('/getDataByPeriod')) {
+            throw NetworkError.timeoutForTransactionList(url, this.config.server.timeout);
+          }
+          
+          throw NetworkError.timeout(url, this.config.server.timeout);
         }
         if (axiosError.code === 'ENOTFOUND') {
           throw NetworkError.unreachable(this.config.server.baseUrl, axiosError.message);
@@ -313,12 +318,23 @@ export class HttpClient {
    * Parses XML response to JavaScript object
    */
   private async parseXmlResponse<T>(xmlString: string): Promise<T> {
+    // Handle empty or whitespace-only responses
+    if (!xmlString || xmlString.trim() === '') {
+      return {} as T;
+    }
+    
     try {
       const result = await parseStringPromise(xmlString, {
         explicitArray: false,
         ignoreAttrs: true,
         trim: true,
       });
+      
+      // Handle case where result is null/undefined
+      if (result === null || result === undefined) {
+        return {} as T;
+      }
+      
       return result as T;
     } catch (error) {
       throw new APIError(`Failed to parse XML response: ${String(error)}`);
@@ -474,6 +490,7 @@ export class HttpClient {
 
   /**
    * Logs a message based on configured log level
+   * Note: Uses console.error to avoid corrupting MCP stdio transport
    */
   private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: unknown[]): void {
     const configLevel = this.config.logging?.level ?? 'info';
@@ -485,15 +502,17 @@ export class HttpClient {
       const timestamp = new Date().toISOString();
       const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
       
+      // Use console.error (stderr) instead of console.log (stdout)
+      // because MCP uses stdout for JSON-RPC communication
       if (this.config.logging?.format === 'json') {
-        console.log(JSON.stringify({
+        console.error(JSON.stringify({
           timestamp,
           level,
           message,
           args: args.length > 0 ? args : undefined,
         }));
       } else {
-        console.log(prefix, message, ...args);
+        console.error(prefix, message, ...args);
       }
     }
   }
