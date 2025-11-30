@@ -33,8 +33,6 @@ Ensure you have the following before starting the installation:
 
 ### 2. Integration for IDEs & AI Clients 💻
 
-The server is run by your client via the npx command. Add the following configuration to your client's specific setup file:
-
 #### A. VS Code / GitHub Copilot
 
 **One Click Installer:**
