@@ -41,8 +41,8 @@ The server is run by your client via the npx command. Add the following configur
 
 Use the oneclick installer below for the fastest setup. This will create the necessary configuration file and prompt you for the base URL.
 
-[![Install for VS Code](https://img.shields.io/badge/VS_Code-Install_Money_Manager_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=money-manager&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22money-manager-mcp%40latest%22%2C%22--baseUrl%22%2C%22%24%7Binput%3AmoneyManager.baseUrl%7D%22%5D%7D&inputs=%5B%7B%22id%22%3A%22moneyManager.baseUrl%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20the%20base%20URL%20for%20the%20Money%20Manager%20API%20%28e.g.%2C%20http%3A%2F%2F192.168.1.100%3A7200%29%22%2C%22default%22%3A%22http%3A%2F%2F192.168.1.100%3A7200%22%7D%5D)
-[![Install for VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_Money_Manager_MCP-24bfa5?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=money-manager&quality=insiders&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22money-manager-mcp%40latest%22%2C%22--baseUrl%22%2C%22%24%7Binput%3AmoneyManager.baseUrl%7D%22%5D%7D&inputs=%5B%7B%22id%22%3A%22moneyManager.baseUrl%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20the%20base%20URL%20for%20the%20Money%20Manager%20API%20%28e.g.%2C%20http%3A%2F%2F192.168.1.100%3A7200%29%22%2C%22default%22%3A%22http%3A%2F%2F192.168.1.100%3A7200%22%7D%5D)
+[![Install for VS Code](https://img.shields.io/badge/VS_Code-Install_Money_Manager_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=money-manager&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22money-manager-mcp%40latest%22%2C%22--baseUrl%22%2C%22%24%7Binput%3AmoneyManager.baseUrl%7D%22%5D%7D&inputs=%5B%7B%22id%22%3A%22moneyManager.baseUrl%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20the%20base%20URL%20for%20the%20Money%20Manager%20API%20%28e.g.%2C%20http%3A%2F%2F192.168.1.1%3A8888%29%22%2C%22default%22%3A%22http%3A%2F%2F192.168.1.1%3A8888%22%7D%5D)
+[![Install for VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_Money_Manager_MCP-24bfa5?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=money-manager&quality=insiders&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22money-manager-mcp%40latest%22%2C%22--baseUrl%22%2C%22%24%7Binput%3AmoneyManager.baseUrl%7D%22%5D%7D&inputs=%5B%7B%22id%22%3A%22moneyManager.baseUrl%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20the%20base%20URL%20for%20the%20Money%20Manager%20API%20%28e.g.%2C%20http%3A%2F%2F192.168.1.1%3A8888%29%22%2C%22default%22%3A%22http%3A%2F%2F192.168.1.1%3A8888%22%7D%5D)
 
 **Manual Configuration:**
 
@@ -66,7 +66,7 @@ If the buttons fail, add the following JSON block to your workspace's `.vscode/m
       "id": "moneyManager.baseUrl",
       "description": "Enter the base URL for the Money Manager API",
       "type": "promptString",
-      "default": "http://192.168.1.100:7200"
+      "default": "http://192.168.1.1:8888"
     }
   ]
 }
@@ -104,7 +104,7 @@ You **must** start the web server in the app to get the necessary IP address and
 2. Navigate to **More** (three dots icon).
 3. Select **PC Manager**.
 4. Tap **Start** to launch the web server.
-5. **Note the displayed IP address and Port** (e.g., `192.168.1.100:7200`). Use this entire string as the `http://YOUR_PHONE_IP:PORT` value in your commands.
+5. **Note the displayed IP address and Port** (e.g., `192.168.1.1:8888`). Use this entire string as the `http://YOUR_PHONE_IP:PORT` value in your commands.
 
 > 📖 For advanced setup options, see [docs/SETUP.md](docs/SETUP.md)
 

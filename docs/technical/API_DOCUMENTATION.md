@@ -58,7 +58,7 @@ The API endpoints documented here were discovered through reverse engineering th
 {MONEY_MANAGER_BASE_URL}/moneyBook
 ```
 
-Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http://192.168.1.100:7200`).
+Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http://192.168.1.1:8888`).
 
 ---
 

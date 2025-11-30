@@ -46,7 +46,7 @@ export type Config = z.infer<typeof ConfigSchema>;
  */
 const DEFAULT_CONFIG: Partial<Config> = {
   server: {
-    baseUrl: "http://192.168.1.100:8888",
+    baseUrl: "http://192.168.1.1:8888",
     timeout: 30000,
     retryCount: 3,
     retryDelay: 1000,

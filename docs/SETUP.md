@@ -50,7 +50,7 @@ This guide covers installation and configuration of the Money Manager MCP server
 The simplest way to configure the server is via the `--baseUrl` argument:
 
 ```bash
-npx money-manager-mcp@latest --baseUrl http://192.168.1.100:7200
+npx money-manager-mcp@latest --baseUrl http://192.168.1.1:8888
 ```
 
 ### Environment Variables
@@ -124,7 +124,7 @@ Create `.vscode/mcp.json` in your workspace:
       "id": "moneyManager.baseUrl",
       "description": "Enter the base URL for the Money Manager API",
       "type": "promptString",
-      "default": "http://192.168.1.100:7200"
+      "default": "http://192.168.1.1:8888"
     }
   ]
 }
@@ -145,7 +145,7 @@ If you prefer not to be prompted each time:
       "args": [
         "money-manager-mcp@latest",
         "--baseUrl",
-        "http://192.168.1.100:7200"
+        "http://192.168.1.1:8888"
       ]
     }
   }
@@ -312,7 +312,7 @@ The Money Manager app runs on your local network. Common ways to find it:
 1. Open Money Manager on your mobile device.
 2. Navigate to **More > PC Manager**.
 3. Click on **Start** to start the server.
-4. Note the IP address and port displayed (e.g., `192.168.1.100:7200`).
+4. Note the IP address and port displayed (e.g., `192.168.1.1:8888`).
 
 ## Troubleshooting
 
