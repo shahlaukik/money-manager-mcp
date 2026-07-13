@@ -80,19 +80,26 @@ The server reads configuration in this order (highest priority first):
 
 1. **Command line arguments** (`--baseUrl`)
 2. **Environment variables** (`MONEY_MANAGER_BASE_URL`)
-3. **Configuration file** (`money-manager-config.json`)
+3. **Configuration file** (`.money-manager-mcp.json`)
+4. **Schema defaults**
 
 ### Configuration File (Alternative)
 
-You can also use a `money-manager-config.json` file:
+You can also use a `.money-manager-mcp.json` file in your working directory:
 
 ```json
 {
-  "baseUrl": "http://your-server-ip:port",
-  "timeout": 30000,
-  "retryCount": 3,
-  "logLevel": "info",
-  "sessionPersist": true
+  "server": {
+    "baseUrl": "http://your-server-ip:port",
+    "timeout": 30000,
+    "retryCount": 3
+  },
+  "logging": {
+    "level": "info"
+  },
+  "session": {
+    "persist": true
+  }
 }
 ```
 

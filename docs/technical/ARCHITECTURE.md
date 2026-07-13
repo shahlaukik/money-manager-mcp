@@ -223,22 +223,36 @@ JSON-serialized domain object (e.g. `{ count, transactions }`).
 
 ## 6. Configuration
 
+Configuration is defined by a single Zod schema (`src/config/index.ts`), which is
+also the source of truth for defaults. The `--baseUrl` CLI flag is the primary
+way to set the server address.
+
 ### Environment Variables
 
 | Variable                        | Required | Default | Description          |
 | ------------------------------- | -------- | ------- | -------------------- |
-| `MONEY_MANAGER_BASE_URL`        | Yes      | -       | Server URL           |
+| `MONEY_MANAGER_BASE_URL`        | No\*     | -       | Server URL           |
 | `MONEY_MANAGER_TIMEOUT`         | No       | 30000   | Request timeout (ms) |
 | `MONEY_MANAGER_RETRY_COUNT`     | No       | 3       | Retry attempts       |
 | `MONEY_MANAGER_LOG_LEVEL`       | No       | info    | Log level            |
 | `MONEY_MANAGER_SESSION_PERSIST` | No       | true    | Persist cookies      |
 
+\* Either `--baseUrl` or `MONEY_MANAGER_BASE_URL` must be provided.
+
+### Configuration Priority
+
+Highest priority first:
+
+1. **CLI argument** — `--baseUrl http://192.168.1.1:8888`
+2. **Environment variables** — `MONEY_MANAGER_*`
+3. **Config file** — `.money-manager-mcp.json` in the working directory
+4. **Schema defaults**
+
 ### Configuration Loading
 
-1. Load `.env` file if present
-2. Read environment variables
-3. Apply defaults for missing values
-4. Validate with Zod schema
+1. Load `.env` file if present (via `dotenv`)
+2. Merge file config + env config + CLI override
+3. Validate with the Zod schema, which fills in defaults
 
 ---
 
@@ -255,7 +269,6 @@ JSON-serialized domain object (e.g. `{ count, transactions }`).
 - `.env` - Environment configuration
 - `.session-cookies.json` - Session data
 - `*.xls`, `*.xlsx` - Exported financial data
-- `*.sqlite` - Database backups
 
 ---
 
@@ -266,19 +279,19 @@ JSON-serialized domain object (e.g. `{ count, transactions }`).
 │   AI Assistant  │
 │ (Claude/Copilot)│
 └────────┬────────┘
-         │ MCP Protocol
+         │ MCP Protocol (stdio)
          ▼
 ┌─────────────────┐
-│  MCP Server     │
-│ (money-manager) │
+│  FastMCP Server │
+│  (index.ts)     │
 └────────┬────────┘
-         │ Tool Invocation
+         │ validates args, dispatches
          ▼
 ┌─────────────────┐
 │  Tool Handler   │
-│   (handlers.ts) │
+│ (handlers.ts)   │
 └────────┬────────┘
-         │ Validated Input
+         │ builds request
          ▼
 ┌─────────────────┐
 │  HTTP Client    │
@@ -335,13 +348,13 @@ interface Category {
 
 ## 10. Testing
 
-### Manual Testing
+There is no automated test suite. The server is verified by:
 
-The server can be tested by:
-
-1. Running the built server with proper configuration
-2. Using an MCP-compatible client (Claude Desktop, VS Code)
-3. Invoking tools and verifying responses
+1. `npm run build` — TypeScript strict compilation
+2. `npm run lint` — ESLint
+3. Manual testing with an MCP-compatible client (Claude Desktop, VS Code)
+4. Handlers are pure `(client, args) → object` functions, so they can be
+   unit-tested against a mocked `HttpClient` without a live server.
 
 ### Debug Mode
 

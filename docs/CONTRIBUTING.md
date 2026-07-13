@@ -67,7 +67,7 @@ npm run dev
 | Command          | Description                      |
 | ---------------- | -------------------------------- |
 | `npm run build`  | Compile TypeScript to JavaScript |
-| `npm run dev`    | Run with ts-node for development |
+| `npm run dev`    | Run with tsx for development     |
 | `npm start`      | Run the compiled server          |
 | `npm run lint`   | Run ESLint                       |
 | `npm run format` | Format code with Prettier        |
@@ -111,21 +111,17 @@ const createTransaction = async (input: any) => {
 
 ### Error Handling
 
-- Use custom error classes from `src/errors`
+- Use custom error classes from `src/errors` (`NetworkError`, `APIError`, `SessionError`, `FileError`)
+- Throw them from handlers — FastMCP catches them and surfaces them to the client as `isError` results
 - Always include error context
-- Log errors appropriately
 
 ```typescript
-import { ApiError } from "../errors";
+import { APIError } from "../errors";
 
 try {
-  await apiClient.post("/endpoint", data);
+  await client.post("/endpoint", data);
 } catch (error) {
-  throw new ApiError("Failed to create transaction", {
-    cause: error,
-    endpoint: "/endpoint",
-    data,
-  });
+  throw new APIError("Failed to create transaction");
 }
 ```
 
@@ -141,8 +137,7 @@ try {
  *
  * @param input - Transaction details
  * @returns The created transaction ID
- * @throws {ValidationError} If input is invalid
- * @throws {ApiError} If API call fails
+ * @throws {APIError} If the API call fails
  */
 export async function createTransaction(
   input: TransactionInput,
@@ -166,37 +161,43 @@ src/
 
 ### Adding a New Tool
 
-1. **Define the schema** in `src/schemas/index.ts`:
+Each tool is defined **once** — there is no separate JSON Schema list and no
+manual registration in `index.ts`. FastMCP derives the advertised JSON Schema
+from the Zod schema and validates inputs automatically.
+
+1. **Define the Zod schema + inferred type** in `src/schemas/index.ts`:
 
    ```typescript
    export const NewToolInputSchema = z.object({
      param1: z.string(),
      param2: z.number().optional(),
    });
+   export type NewToolInput = z.infer<typeof NewToolInputSchema>;
    ```
 
-2. **Add the handler** in `src/tools/handlers.ts`:
+2. **Write the handler and add it to the `TOOLS` array** in `src/tools/handlers.ts`:
 
    ```typescript
    export async function handleNewTool(
-     args: z.infer<typeof NewToolInputSchema>,
-     client: MoneyManagerClient,
-   ): Promise<ToolResponse> {
-     // Implementation
+     client: HttpClient,
+     args: NewToolInput,
+   ): Promise<unknown> {
+     // Implementation — return a plain object; index.ts wraps it as JSON text.
    }
    ```
 
-3. **Register the tool** in `src/index.ts`:
+   Then add an entry to the `TOOLS` array:
 
    ```typescript
    {
-     name: 'new_tool',
-     description: 'Description of what the tool does',
-     inputSchema: zodToJsonSchema(NewToolInputSchema),
-   }
+     name: "new_tool",
+     description: "Description of what the tool does",
+     schema: NewToolInputSchema,
+     handler: handleNewTool,
+   },
    ```
 
-4. **Add documentation** in `docs/USAGE.md`
+3. **Add documentation** in `docs/USAGE.md`
 
 ## Pull Request Process
 

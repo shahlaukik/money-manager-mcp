@@ -160,6 +160,7 @@ Contributions are welcome! Please see our [Contributing Guide](docs/CONTRIBUTING
 ## 🙏 Acknowledgments
 
 - [Model Context Protocol](https://modelcontextprotocol.io/) for the MCP specification
+- [FastMCP](https://github.com/punkpeye/fastmcp) — the TypeScript MCP framework this server is built on
 - The open-source community for inspiration and support
 
 ---

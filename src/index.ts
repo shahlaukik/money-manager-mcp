@@ -56,11 +56,8 @@ async function main(): Promise<void> {
   // Logging goes to stderr so the stdio JSON-RPC channel on stdout stays clean.
   const log = (msg: string) => console.error(`[money-manager-mcp] ${msg}`);
 
-  const config: Config = await loadConfig();
   const cliBaseUrl = parseBaseUrlArg();
-  if (cliBaseUrl) {
-    config.server.baseUrl = cliBaseUrl;
-  }
+  const config: Config = await loadConfig({ baseUrl: cliBaseUrl });
   log(`Base URL: ${config.server.baseUrl}`);
 
   const httpClient = createHttpClient(config);
@@ -78,6 +75,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error("[money-manager-mcp] Fatal error:", error);
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error(`[money-manager-mcp] Fatal error: ${msg}`);
   process.exit(1);
 });

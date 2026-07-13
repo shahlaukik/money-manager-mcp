@@ -72,28 +72,33 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ## API Endpoints Summary
 
-| #   | Endpoint                  | Method   | Category       | Description                           |
-| --- | ------------------------- | -------- | -------------- | ------------------------------------- |
-| 1   | `/getInitData`            | GET/POST | Initialization | Get initial application data          |
-| 2   | `/getDataByPeriod`        | GET      | Transactions   | Get transaction data by date range    |
-| 3   | `/create`                 | POST     | Transactions   | Create a new transaction              |
-| 4   | `/update`                 | POST     | Transactions   | Update an existing transaction        |
-| 5   | `/delete`                 | POST     | Transactions   | Delete transactions                   |
-| 6   | `/getSummaryDataByPeriod` | GET      | Summary        | Get financial summary by period       |
-| 7   | `/getExcelFile`           | POST     | Export         | Export data to Excel file             |
-| 8   | `/getAssetData`           | GET      | Assets         | Get asset list data (tree structure)  |
-| 9   | `/getCardData`            | GET      | Assets         | Get credit card data (tree structure) |
-| 10  | `/assetAdd`               | POST     | Assets         | Add a new asset                       |
-| 11  | `/assetModify`            | POST     | Assets         | Modify an existing asset              |
-| 12  | `/removeAsset`            | POST     | Assets         | Remove an asset                       |
-| 13  | `/addAssetCard`           | POST     | Credit Cards   | Add a new credit card                 |
-| 14  | `/modifyCard`             | POST     | Credit Cards   | Modify a credit card                  |
-| 15  | `/moveAsset`              | POST     | Transfers      | Transfer money between assets         |
-| 16  | `/modifyMoveAsset`        | POST     | Transfers      | Modify an asset transfer              |
-| 17  | `/getDashBoardData`       | GET      | Dashboard      | Get dashboard chart data              |
-| 18  | `/getEachAssetChartData`  | POST     | Dashboard      | Get individual asset chart data       |
-| 19  | `/uploadSqlFile`          | POST     | Backup/Restore | Upload SQLite backup file             |
-| 20  | `/money.sqlite`           | GET      | Backup/Restore | Download SQLite database file         |
+> **Note:** This documents the upstream Money Manager API. Endpoints #1–18 are
+> exposed by this MCP server as tools; #19–20 (backup/restore) intentionally are
+> **not** exposed — they operate on the raw SQLite database and are too dangerous
+> to invoke via an LLM.
+
+| #   | Endpoint                  | Method   | Category       | Description                           | Exposed |
+| --- | ------------------------- | -------- | -------------- | ------------------------------------- | ------- |
+| 1   | `/getInitData`            | GET/POST | Initialization | Get initial application data          | ✅      |
+| 2   | `/getDataByPeriod`        | GET      | Transactions   | Get transaction data by date range    | ✅      |
+| 3   | `/create`                 | POST     | Transactions   | Create a new transaction              | ✅      |
+| 4   | `/update`                 | POST     | Transactions   | Update an existing transaction        | ✅      |
+| 5   | `/delete`                 | POST     | Transactions   | Delete transactions                   | ✅      |
+| 6   | `/getSummaryDataByPeriod` | GET      | Summary        | Get financial summary by period       | ✅      |
+| 7   | `/getExcelFile`           | POST     | Export         | Export data to Excel file             | ✅      |
+| 8   | `/getAssetData`           | GET      | Assets         | Get asset list data (tree structure)  | ✅      |
+| 9   | `/getCardData`            | GET      | Assets         | Get credit card data (tree structure) | ✅      |
+| 10  | `/assetAdd`               | POST     | Assets         | Add a new asset                       | ✅      |
+| 11  | `/assetModify`            | POST     | Assets         | Modify an existing asset              | ✅      |
+| 12  | `/removeAsset`            | POST     | Assets         | Remove an asset                       | ✅      |
+| 13  | `/addAssetCard`           | POST     | Credit Cards   | Add a new credit card                 | ✅      |
+| 14  | `/modifyCard`             | POST     | Credit Cards   | Modify a credit card                  | ✅      |
+| 15  | `/moveAsset`              | POST     | Transfers      | Transfer money between assets         | ✅      |
+| 16  | `/modifyMoveAsset`        | POST     | Transfers      | Modify an asset transfer              | ✅      |
+| 17  | `/getDashBoardData`       | GET      | Dashboard      | Get dashboard chart data              | ✅      |
+| 18  | `/getEachAssetChartData`  | POST     | Dashboard      | Get individual asset chart data       | ✅      |
+| 19  | `/uploadSqlFile`          | POST     | Backup/Restore | Upload SQLite backup file             | ❌      |
+| 20  | `/money.sqlite`           | GET      | Backup/Restore | Download SQLite database file         | ❌      |
 
 ---
 

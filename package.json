@@ -11,7 +11,6 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "test": "vitest",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -37,26 +36,24 @@
   "types": "dist/index.d.ts",
   "dependencies": {
     "axios": "^1.6.0",
-    "axios-cookiejar-support": "^4.0.0",
+    "axios-cookiejar-support": "^7.0.0",
     "dotenv": "^16.3.0",
     "fastmcp": "^4.4.0",
-    "form-data": "^4.0.0",
     "tough-cookie": "^4.1.0",
     "xml2js": "^0.6.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^20.10.0",
     "@types/tough-cookie": "^4.0.5",
     "@types/xml2js": "^0.4.14",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
-    "jiti": "^2.6.1",
     "prettier": "^3.1.0",
     "tsx": "^4.6.0",
     "typescript": "^5.3.0",
-    "typescript-eslint": "^8.48.0",
-    "vitest": "^4.0.14"
+    "typescript-eslint": "^8.48.0"
   },
   "engines": {
     "node": ">=18.0.0"

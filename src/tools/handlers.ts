@@ -13,23 +13,38 @@ import type { HttpClient } from "../client/http-client.js";
 import { FileError, wrapError } from "../errors/index.js";
 import {
   AssetCreateInputSchema,
+  type AssetCreateInput,
   AssetDeleteInputSchema,
+  type AssetDeleteInput,
   AssetListInputSchema,
   AssetUpdateInputSchema,
+  type AssetUpdateInput,
   CardCreateInputSchema,
+  type CardCreateInput,
   CardListInputSchema,
   CardUpdateInputSchema,
+  type CardUpdateInput,
   DashboardGetAssetChartInputSchema,
+  type DashboardGetAssetChartInput,
   DashboardGetOverviewInputSchema,
   InitGetDataInputSchema,
+  type InitGetDataInput,
   SummaryExportExcelInputSchema,
+  type SummaryExportExcelInput,
   SummaryGetPeriodInputSchema,
+  type SummaryGetPeriodInput,
   TransactionCreateInputSchema,
+  type TransactionCreateInput,
   TransactionDeleteInputSchema,
+  type TransactionDeleteInput,
   TransactionListInputSchema,
+  type TransactionListInput,
   TransactionUpdateInputSchema,
+  type TransactionUpdateInput,
   TransferCreateInputSchema,
+  type TransferCreateInput,
   TransferUpdateInputSchema,
+  type TransferUpdateInput,
 } from "../schemas/index.js";
 import type {
   AssetGroup,
@@ -110,7 +125,7 @@ export function toNumber(value: unknown): number {
 /** Retrieves initial application data: categories, payment types, assets, books. */
 export async function handleInitGetData(
   client: HttpClient,
-  args: { mbid?: string },
+  args: InitGetDataInput,
 ) {
   const params: Record<string, string | undefined> = {};
   if (args.mbid) params["mbid"] = args.mbid;
@@ -132,7 +147,7 @@ export async function handleInitGetData(
 /** Lists transactions within a date range (handles three XML empty-edge cases). */
 export async function handleTransactionList(
   client: HttpClient,
-  args: { startDate: string; endDate: string; mbid: string; assetId?: string },
+  args: TransactionListInput,
 ) {
   const raw = await client.getXml<RawTransactionXmlResponse>(
     "/getDataByPeriod",
@@ -179,7 +194,10 @@ export async function handleTransactionList(
 }
 
 /** Creates a new income or expense transaction. */
-export async function handleTransactionCreate(client: HttpClient, args: any) {
+export async function handleTransactionCreate(
+  client: HttpClient,
+  args: TransactionCreateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/create", {
     mbDate: args.mbDate,
     assetId: args.assetId,
@@ -202,7 +220,10 @@ export async function handleTransactionCreate(client: HttpClient, args: any) {
 }
 
 /** Updates an existing transaction. */
-export async function handleTransactionUpdate(client: HttpClient, args: any) {
+export async function handleTransactionUpdate(
+  client: HttpClient,
+  args: TransactionUpdateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/update", {
     id: args.id,
     mbDate: args.mbDate,
@@ -228,7 +249,7 @@ export async function handleTransactionUpdate(client: HttpClient, args: any) {
 /** Deletes one or more transactions (API expects ":id1:id2:id3"). */
 export async function handleTransactionDelete(
   client: HttpClient,
-  args: { ids: string[] },
+  args: TransactionDeleteInput,
 ) {
   const response = await client.post<ApiOperationResponse>("/delete", {
     ids: ":" + args.ids.join(":"),
@@ -243,7 +264,7 @@ export async function handleTransactionDelete(
 /** Retrieves financial summary statistics for a date range. */
 export async function handleSummaryGetPeriod(
   client: HttpClient,
-  args: { startDate: string; endDate: string },
+  args: SummaryGetPeriodInput,
 ) {
   const raw = await client.get<RawSummaryResponse>(
     "/getSummaryDataByPeriod",
@@ -265,14 +286,7 @@ export async function handleSummaryGetPeriod(
  */
 export async function handleSummaryExportExcel(
   client: HttpClient,
-  args: {
-    startDate: string;
-    endDate: string;
-    mbid: string;
-    assetId?: string;
-    inOutType?: string;
-    outputPath: string;
-  },
+  args: SummaryExportExcelInput,
 ) {
   let outputPath = args.outputPath;
   let extensionCorrected = false;
@@ -325,7 +339,10 @@ export async function handleAssetList(client: HttpClient) {
 }
 
 /** Creates a new asset/account. */
-export async function handleAssetCreate(client: HttpClient, args: any) {
+export async function handleAssetCreate(
+  client: HttpClient,
+  args: AssetCreateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/assetAdd", {
     assetGroupId: args.assetGroupId,
     assetGroupName: args.assetGroupName,
@@ -342,7 +359,10 @@ export async function handleAssetCreate(client: HttpClient, args: any) {
 }
 
 /** Modifies an existing asset. */
-export async function handleAssetUpdate(client: HttpClient, args: any) {
+export async function handleAssetUpdate(
+  client: HttpClient,
+  args: AssetUpdateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/assetModify", {
     assetId: args.assetId,
     assetGroupId: args.assetGroupId,
@@ -362,7 +382,7 @@ export async function handleAssetUpdate(client: HttpClient, args: any) {
 /** Removes an asset. */
 export async function handleAssetDelete(
   client: HttpClient,
-  args: { assetId: string },
+  args: AssetDeleteInput,
 ) {
   const response = await client.post<ApiOperationResponse>("/removeAsset", {
     assetId: args.assetId,
@@ -391,7 +411,10 @@ export async function handleCardList(client: HttpClient) {
 }
 
 /** Creates a new credit card. */
-export async function handleCardCreate(client: HttpClient, args: any) {
+export async function handleCardCreate(
+  client: HttpClient,
+  args: CardCreateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/addAssetCard", {
     cardName: args.cardName,
     linkAssetId: args.linkAssetId,
@@ -408,7 +431,10 @@ export async function handleCardCreate(client: HttpClient, args: any) {
 }
 
 /** Modifies an existing credit card. */
-export async function handleCardUpdate(client: HttpClient, args: any) {
+export async function handleCardUpdate(
+  client: HttpClient,
+  args: CardUpdateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/modifyCard", {
     assetId: args.assetId,
     cardName: args.cardName,
@@ -425,7 +451,10 @@ export async function handleCardUpdate(client: HttpClient, args: any) {
 }
 
 /** Transfers money between two assets. */
-export async function handleTransferCreate(client: HttpClient, args: any) {
+export async function handleTransferCreate(
+  client: HttpClient,
+  args: TransferCreateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/moveAsset", {
     moveDate: args.moveDate,
     fromAssetId: args.fromAssetId,
@@ -449,7 +478,10 @@ export async function handleTransferCreate(client: HttpClient, args: any) {
  * WARNING: the server-side API creates a NEW transfer with a NEW ID instead of
  * updating in-place — the old ID becomes invalid. Use transaction_list to find it.
  */
-export async function handleTransferUpdate(client: HttpClient, args: any) {
+export async function handleTransferUpdate(
+  client: HttpClient,
+  args: TransferUpdateInput,
+) {
   const response = await client.post<ApiOperationResponse>("/modifyMoveAsset", {
     id: args.id,
     moveDate: args.moveDate,
@@ -484,7 +516,7 @@ export async function handleDashboardGetOverview(client: HttpClient) {
 /** Retrieves historical chart data for a specific asset (note: uses POST). */
 export async function handleDashboardGetAssetChart(
   client: HttpClient,
-  args: { assetId: string },
+  args: DashboardGetAssetChartInput,
 ) {
   const raw = await client.post<RawAssetChartResponse>(
     "/getEachAssetChartData",
@@ -497,22 +529,37 @@ export async function handleDashboardGetAssetChart(
 // Tool registry
 // ============================================================================
 
-/** A handler takes the HTTP client + validated args and returns a domain object. */
-type Handler<A = any> = (client: HttpClient, args: A) => Promise<unknown>;
+/**
+ * A handler takes the HTTP client + validated args and returns a domain object.
+ * Each handler is typed against its own schema's inferred input type; the
+ * `ToolDefinition` wrapper erases that generic so tools can live in one array.
+ */
+type Handler<A> = (client: HttpClient, args: A) => Promise<unknown>;
 
 /** Definition consumed by index.ts to register a FastMCP tool. */
-export type ToolDefinition = {
+type ToolDefinition<A = unknown> = {
   name: string;
   description: string;
   schema: z.ZodType;
-  handler: Handler<any>;
+  handler: Handler<A>;
 };
+
+/** Erased tool definition (the args type is enforced per-handler, not here). */
+export type AnyToolDefinition = ToolDefinition<unknown>;
 
 /**
  * All tools, each defined once: name + description + Zod schema (auto-advertised
- * and used for validation by FastMCP) + handler.
+ * and used for validation by FastMCP) + handler. The array is cast to the erased
+ * type — each entry is fully type-checked against its own schema's input above.
  */
-export const TOOLS: ToolDefinition[] = [
+export const TOOLS: AnyToolDefinition[] = ([
+  {
+    name: "init_get_data",
+    description:
+      "Retrieves initial application data including categories, payment types, asset groups, and multi-book configuration.",
+    schema: InitGetDataInputSchema,
+    handler: handleInitGetData,
+  },
   {
     name: "init_get_data",
     description:
@@ -625,4 +672,4 @@ export const TOOLS: ToolDefinition[] = [
     schema: DashboardGetAssetChartInputSchema,
     handler: handleDashboardGetAssetChart,
   },
-];
+] as AnyToolDefinition[]);
