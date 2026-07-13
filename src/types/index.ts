@@ -492,26 +492,11 @@ export interface RawAssetChartResponse {
 }
 
 // ============================================================================
-// Backup Types
+// Backup Types — removed
+// ----------------------------------------------------------------------------
+// backup_download / backup_restore were intentionally removed (too dangerous to
+// expose via MCP). Their response types are gone along with their handlers.
 // ============================================================================
-
-/**
- * Response for backup download operation
- */
-export interface BackupDownloadResponse {
-  success: boolean;
-  filePath: string;
-  fileSize: number;
-  message?: string;
-}
-
-/**
- * Response for backup restore operation
- */
-export interface BackupRestoreResponse {
-  success: boolean;
-  message?: string;
-}
 
 // ============================================================================
 // Export Types

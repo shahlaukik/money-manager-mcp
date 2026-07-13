@@ -12,7 +12,7 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 **Rationale:**
 
-- First-class MCP SDK support with `@modelcontextprotocol/sdk`
+- Built on [FastMCP](https://github.com/punkpeye/fastmcp), an opinionated MCP server framework on top of the official SDK
 - Strong typing for API request/response schemas
 - Better IDE support and developer experience
 - Native JSON handling for API responses
@@ -20,15 +20,15 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 ### Core Dependencies
 
-| Package                     | Purpose                                     |
-| --------------------------- | ------------------------------------------- |
-| `@modelcontextprotocol/sdk` | MCP server implementation                   |
-| `axios`                     | HTTP client for API calls                   |
-| `zod`                       | Runtime schema validation                   |
-| `dotenv`                    | Environment variable management             |
-| `xml2js`                    | XML response parsing (for transaction list) |
-| `tough-cookie`              | Cookie/session management                   |
-| `axios-cookiejar-support`   | Cookie jar integration with axios           |
+| Package                     | Purpose                                            |
+| --------------------------- | -------------------------------------------------- |
+| `fastmcp`                   | MCP server framework (transport, dispatch, schema) |
+| `axios`                     | HTTP client for API calls                          |
+| `zod`                       | Input schema validation (also drives tool schemas) |
+| `dotenv`                    | Environment variable management                    |
+| `xml2js`                    | XML response parsing (for transaction list)        |
+| `tough-cookie`              | Cookie/session management                          |
+| `axios-cookiejar-support`   | Cookie jar integration with axios                  |
 
 ### Development Dependencies
 
@@ -115,6 +115,21 @@ Tools follow the pattern: `{category}_{action}` using snake_case.
 | 17  | `dashboard_get_overview`    | `/getDashBoardData`       | GET    |
 | 18  | `dashboard_get_asset_chart` | `/getEachAssetChartData`  | POST   |
 
+### Tool Registration
+
+Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the
+`TOOLS` array, binding together its name, description, Zod input schema, and
+handler. FastMCP uses the Zod schema to:
+
+1. Auto-generate the JSON Schema advertised to clients via `tools/list`
+2. Validate inputs before the handler runs
+3. Dispatch `tools/call` to the right handler
+
+`src/index.ts` is a thin bootstrap: it creates the `FastMCP` server, binds the
+HTTP client to each handler via closure, wraps each handler's domain-object
+result as JSON text content, and starts the stdio transport. There is no
+hand-maintained JSON Schema list and no double validation.
+
 ---
 
 ## 4. Key Implementation Details
@@ -193,17 +208,16 @@ enum ErrorCategory {
 }
 ```
 
-### Error Response Structure
+### Error Surfacing
 
-```typescript
-interface McpError {
-  code: string; // Error code (e.g., "NETWORK_TIMEOUT")
-  category: ErrorCategory; // Error category
-  message: string; // Human-readable message
-  details?: Record<string, any>; // Additional context
-  retryable: boolean; // Whether retry might succeed
-}
-```
+Handlers throw `McpError` subclasses (`NetworkError`, `APIError`, etc.). FastMCP
+catches these and returns them to the client as native MCP tool results with
+`isError: true`. The structured `{ code, category, retryable }` metadata is an
+internal taxonomy used for logging and retry decisions; the client-facing error
+payload is the error's message plus the `isError` flag.
+
+Successful results are returned as a single text content block containing the
+JSON-serialized domain object (e.g. `{ count, transactions }`).
 
 ---
 

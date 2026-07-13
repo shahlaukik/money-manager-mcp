@@ -343,95 +343,10 @@ export type DashboardGetAssetChartInput = z.infer<
 >;
 
 // ============================================================================
-// Backup Schemas
+// Backup Schemas — removed
+// ----------------------------------------------------------------------------
+// backup_download / backup_restore were intentionally removed: they operate on
+// the raw SQLite database and are too dangerous to expose via MCP. No schema or
+// handler is registered for them.
 // ============================================================================
 
-/**
- * Input schema for backup_download tool
- */
-export const BackupDownloadInputSchema = z.object({
-  outputPath: NonEmptyString,
-});
-
-export type BackupDownloadInput = z.infer<typeof BackupDownloadInputSchema>;
-
-/**
- * Input schema for backup_restore tool
- */
-export const BackupRestoreInputSchema = z.object({
-  filePath: NonEmptyString,
-});
-
-export type BackupRestoreInput = z.infer<typeof BackupRestoreInputSchema>;
-
-// ============================================================================
-// Tool Schema Registry
-// ============================================================================
-
-/**
- * Registry of all tool input schemas
- */
-export const ToolSchemas = {
-  // Initialization
-  init_get_data: InitGetDataInputSchema,
-
-  // Transactions
-  transaction_list: TransactionListInputSchema,
-  transaction_create: TransactionCreateInputSchema,
-  transaction_update: TransactionUpdateInputSchema,
-  transaction_delete: TransactionDeleteInputSchema,
-
-  // Summary
-  summary_get_period: SummaryGetPeriodInputSchema,
-  summary_export_excel: SummaryExportExcelInputSchema,
-
-  // Assets
-  asset_list: AssetListInputSchema,
-  asset_create: AssetCreateInputSchema,
-  asset_update: AssetUpdateInputSchema,
-  asset_delete: AssetDeleteInputSchema,
-
-  // Credit Cards
-  card_list: CardListInputSchema,
-  card_create: CardCreateInputSchema,
-  card_update: CardUpdateInputSchema,
-
-  // Transfers
-  transfer_create: TransferCreateInputSchema,
-  transfer_update: TransferUpdateInputSchema,
-
-  // Dashboard
-  dashboard_get_overview: DashboardGetOverviewInputSchema,
-  dashboard_get_asset_chart: DashboardGetAssetChartInputSchema,
-
-  // Backup
-  backup_download: BackupDownloadInputSchema,
-  backup_restore: BackupRestoreInputSchema,
-} as const;
-
-/**
- * Type for tool names
- */
-export type ToolName = keyof typeof ToolSchemas;
-
-/**
- * Helper function to validate tool input
- */
-export function validateToolInput<T extends ToolName>(
-  toolName: T,
-  input: unknown,
-): z.infer<(typeof ToolSchemas)[T]> {
-  const schema = ToolSchemas[toolName];
-  return schema.parse(input);
-}
-
-/**
- * Helper function to safely validate tool input (returns result object)
- */
-export function safeValidateToolInput<T extends ToolName>(
-  toolName: T,
-  input: unknown,
-): z.SafeParseReturnType<unknown, z.infer<(typeof ToolSchemas)[T]>> {
-  const schema = ToolSchemas[toolName];
-  return schema.safeParse(input);
-}

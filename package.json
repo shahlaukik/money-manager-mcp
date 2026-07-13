@@ -1,6 +1,6 @@
 {
   "name": "money-manager-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "MCP server for Realbyte Money Manager API",
   "main": "dist/index.js",
   "type": "module",
@@ -36,10 +36,10 @@
   "homepage": "https://github.com/shahlaukik/money-manager-mcp#readme",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
     "axios": "^1.6.0",
     "axios-cookiejar-support": "^4.0.0",
     "dotenv": "^16.3.0",
+    "fastmcp": "^4.4.0",
     "form-data": "^4.0.0",
     "tough-cookie": "^4.1.0",
     "xml2js": "^0.6.0",
