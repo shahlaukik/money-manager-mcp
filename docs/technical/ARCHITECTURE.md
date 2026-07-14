@@ -117,18 +117,13 @@ Tools follow the pattern: `{category}_{action}` using snake_case.
 
 ### Tool Registration
 
-Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the
-`TOOLS` array, binding together its name, description, Zod input schema, and
-handler. FastMCP uses the Zod schema to:
+Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the `TOOLS` array, binding together its name, description, Zod input schema, and handler. FastMCP uses the Zod schema to:
 
 1. Auto-generate the JSON Schema advertised to clients via `tools/list`
 2. Validate inputs before the handler runs
 3. Dispatch `tools/call` to the right handler
 
-`src/index.ts` is a thin bootstrap: it creates the `FastMCP` server, binds the
-HTTP client to each handler via closure, wraps each handler's domain-object
-result as JSON text content, and starts the stdio transport. There is no
-hand-maintained JSON Schema list and no double validation.
+`src/index.ts` is a thin bootstrap: it creates the `FastMCP` server, binds the HTTP client to each handler via closure, wraps each handler's domain-object result as JSON text content, and starts the stdio transport. There is no hand-maintained JSON Schema list and no double validation.
 
 ---
 
@@ -209,22 +204,15 @@ enum ErrorCategory {
 
 ### Error Surfacing
 
-Handlers throw `McpError` subclasses (`NetworkError`, `APIError`, etc.). FastMCP
-catches these and returns them to the client as native MCP tool results with
-`isError: true`. The structured `{ category, retryable }` metadata is an
-internal taxonomy used for logging and retry decisions; the client-facing error
-payload is the error's message plus the `isError` flag.
+Handlers throw `McpError` subclasses (`NetworkError`, `APIError`, etc.). FastMCP catches these and returns them to the client as native MCP tool results with `isError: true`. The structured `{ category, retryable }` metadata is an internal taxonomy used for logging and retry decisions; the client-facing error payload is the error's message plus the `isError` flag.
 
-Successful results are returned as a single text content block containing the
-JSON-serialized domain object (e.g. `{ count, transactions }`).
+Successful results are returned as a single text content block containing the JSON-serialized domain object (e.g. `{ count, transactions }`).
 
 ---
 
 ## 6. Configuration
 
-Configuration is defined by a single Zod schema (`src/config/index.ts`), which is
-also the source of truth for defaults. The `--baseUrl` CLI flag is the primary
-way to set the server address.
+Configuration is defined by a single Zod schema (`src/config/index.ts`), which is also the source of truth for defaults. The `--baseUrl` CLI flag is the primary way to set the server address.
 
 ### Environment Variables
 
@@ -353,8 +341,7 @@ There is no automated test suite. The server is verified by:
 2. `npm run lint` — ESLint
 3. Manual testing with an MCP-compatible client (Claude Desktop, VS Code)
 
-Handlers are pure `(client, args) → object` functions, so they can be unit-tested
-against a mocked `HttpClient` without a live server, but no such tests are included.
+Handlers are pure `(client, args) → object` functions, so they can be unit-tested against a mocked `HttpClient` without a live server, but no such tests are included.
 
 ### Debug Mode
 

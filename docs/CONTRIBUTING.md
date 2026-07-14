@@ -170,9 +170,7 @@ src/
 
 ### Adding a New Tool
 
-Each tool is defined **once** — there is no separate JSON Schema list and no
-manual registration in `index.ts`. FastMCP derives the advertised JSON Schema
-from the Zod schema and validates inputs automatically.
+Each tool is defined **once** — there is no separate JSON Schema list and no manual registration in `index.ts`. FastMCP derives the advertised JSON Schema from the Zod schema and validates inputs automatically.
 
 1. **Define the Zod schema + inferred type** in `src/schemas/index.ts`:
 
@@ -210,8 +208,7 @@ from the Zod schema and validates inputs automatically.
 
 ## Commit Message Conventions
 
-This project follows [Conventional Commits](https://www.conventionalcommits.org/). Keep
-the subject line concise and imperative:
+This project follows [Conventional Commits](https://www.conventionalcommits.org/). Keep the subject line concise and imperative:
 
 ```text
 <type>: <short description>
@@ -234,8 +231,7 @@ There is no automated test suite today. Until one exists, changes are verified b
 3. **Manual testing** against a live Money Manager server through an MCP client
    (Claude Desktop, VS Code with Copilot, etc.).
 
-Handlers are pure `(client, args) → object` functions, so they are straightforward to
-unit-test against a mocked `HttpClient` if you choose to add tests for your change.
+Handlers are pure `(client, args) → object` functions, so they are straightforward to unit-test against a mocked `HttpClient` if you choose to add tests for your change.
 
 ## Pull Request Process
 

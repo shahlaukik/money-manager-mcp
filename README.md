@@ -9,12 +9,9 @@
 
 ![Money Manager MCP](./docs/assets/banner.png)
 
-An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants manage
-personal finances through the **Realbyte Money Manager** app's PC Manager web server.
+An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants manage personal finances through the **Realbyte Money Manager** app's PC Manager web server.
 
-Each of the **18 tools** is defined once (a Zod schema + handler); the
-[FastMCP](https://github.com/punkpeye/fastmcp) framework derives validation, schema
-advertising, and dispatch from that single definition.
+Each of the **18 tools** is defined once (a Zod schema + handler); the [FastMCP](https://github.com/punkpeye/fastmcp) framework derives validation, schema advertising, and dispatch from that single definition.
 
 ## ✨ Features
 
@@ -27,9 +24,7 @@ advertising, and dispatch from that single definition.
 
 ## 🚀 Quick Start
 
-You need the Money Manager app's web server running on your phone, on the **same
-Wi-Fi network** as your computer. To start it: open the app → **More (⋮) → PC
-Manager → Start**, and note the displayed address (e.g. `192.168.1.1:8888`).
+You need the Money Manager app's web server running on your phone, on the **same Wi-Fi network** as your computer. To start it: open the app → **More (⋮) → PC Manager → Start**, and note the displayed address (e.g. `192.168.1.1:8888`).
 
 Then add the server to your AI client.
 
@@ -77,8 +72,7 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 }
 ```
 
-> 📖 For full client setup, environment variables, and config files, see the
-> [Setup Guide](docs/SETUP.md).
+> 📖 For full client setup, environment variables, and config files, see the [Setup Guide](docs/SETUP.md).
 
 ## 📋 Tools
 
@@ -107,10 +101,7 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 
 ## ⚠️ Legal Disclaimer
 
-**Money Manager** is developed by **RealByte**. This MCP server is an independent
-community project — **not affiliated with, endorsed by, or sponsored by RealByte**.
-Use is at your own risk and intended for personal/educational use. Users are
-responsible for compliance with Money Manager's terms of service.
+**Money Manager** is developed by **RealByte**. This MCP server is an independent community project — **not affiliated with, endorsed by, or sponsored by RealByte**. Use is at your own risk and intended for personal/educational use. Users are responsible for compliance with Money Manager's terms of service.
 
 ## 📄 License
 

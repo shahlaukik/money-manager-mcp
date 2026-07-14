@@ -294,9 +294,7 @@ Should complete without errors.
 npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
 ```
 
-The server should start and log its base URL to stderr. It then waits for an MCP
-client connection via stdio (there is no HTTP port). The `--baseUrl` value must
-point at your running Money Manager web server.
+The server should start and log its base URL to stderr. It then waits for an MCP client connection via stdio (there is no HTTP port). The `--baseUrl` value must point at your running Money Manager web server.
 
 ### 3. Test MCP Connection
 

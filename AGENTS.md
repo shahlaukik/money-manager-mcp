@@ -1,20 +1,14 @@
 # AGENTS.md
 
-Guidance for AI coding agents (Claude, Copilot, ZCode, etc.) working in this repository.
-Read this before making changes.
+Guidance for AI coding agents (Claude, Copilot, ZCode, etc.) working in this repository. Read this before making changes.
 
 ## Project Overview
 
-Money Manager MCP is a **Model Context Protocol** server that lets AI assistants
-manage personal finances through the **Realbyte Money Manager** Android app's
-"PC Manager" web server (a local-network HTTP service).
+Money Manager MCP is a **Model Context Protocol** server that lets AI assistants manage personal finances through the **Realbyte Money Manager** Android app's "PC Manager" web server (a local-network HTTP service).
 
-The server runs over **stdio** and exposes **18 tools** (no resources, no prompts).
-It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in
-TypeScript (strict mode, ESM, Node ≥ 18).
+The server runs over **stdio** and exposes **18 tools** (no resources, no prompts). It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in TypeScript (strict mode, ESM, Node ≥ 18).
 
-A phone running the Money Manager app and the computer running the server must be
-on the **same Wi-Fi network**. There is no automated test suite.
+A phone running the Money Manager app and the computer running the server must be on the **same Wi-Fi network**. There is no automated test suite.
 
 ## Repository Structure
 
@@ -52,16 +46,13 @@ npm run lint     # ESLint
 npm run format   # Prettier
 ```
 
-The server requires a base URL (the only required setting). In development pass it
-as a flag:
+The server requires a base URL (the only required setting). In development pass it as a flag:
 
 ```bash
 npm run dev -- --baseUrl http://192.168.1.1:8888
 ```
 
-The server blocks on stdio waiting for an MCP client. There is no HTTP port and no
-"server ready" line on stdout — logs go to **stderr** to keep the JSON-RPC channel
-on stdout clean.
+The server blocks on stdio waiting for an MCP client. There is no HTTP port and no "server ready" line on stdout — logs go to **stderr** to keep the JSON-RPC channel on stdout clean.
 
 ## Development Workflow
 
@@ -77,37 +68,28 @@ There is no CI config in the repo; the build + lint commands above are the check
 
 ## Architecture in Brief
 
-**Define each tool once.** In `src/tools/handlers.ts`, every entry in the `TOOLS`
-array binds together a `name`, `description`, Zod `schema`, and `handler`.
-FastMCP then:
+**Define each tool once.** In `src/tools/handlers.ts`, every entry in the `TOOLS` array binds together a `name`, `description`, Zod `schema`, and `handler`. FastMCP then:
 
 1. derives the JSON Schema advertised to clients via `tools/list`,
 2. validates inputs against that schema before the handler runs,
 3. dispatches `tools/call` to the handler.
 
-`src/index.ts` is intentionally thin: it creates the `FastMCP` server, binds the
-shared `HttpClient` to each handler via closure, wraps each handler's returned
-domain object as JSON text content, and starts the stdio transport.
+`src/index.ts` is intentionally thin: it creates the `FastMCP` server, binds the shared `HttpClient` to each handler via closure, wraps each handler's returned domain object as JSON text content, and starts the stdio transport.
 
-**Do not** introduce a hand-maintained JSON Schema list, separate registration
-calls per tool, or a second validation layer. The Zod schema is the single source.
+**Do not** introduce a hand-maintained JSON Schema list, separate registration calls per tool, or a second validation layer. The Zod schema is the single source.
 
-**Handlers are pure** `(client, args) → domain object` functions. They must not
-import or call FastMCP APIs, format MCP content, or know they run under MCP. That
-wrapping happens once in `index.ts`.
+**Handlers are pure** `(client, args) → domain object` functions. They must not import or call FastMCP APIs, format MCP content, or know they run under MCP. That wrapping happens once in `index.ts`.
 
 ## Configuration
 
-Layered (highest priority first), all funneled through one Zod schema in
-`src/config/index.ts`:
+Layered (highest priority first), all funneled through one Zod schema in `src/config/index.ts`:
 
 1. `--baseUrl` CLI flag (only CLI option)
 2. `MONEY_MANAGER_*` environment variables
 3. `.money-manager-mcp.json` in the working directory
 4. Schema defaults
 
-Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`,
-`MONEY_MANAGER_RETRY_COUNT`, `MONEY_MANAGER_LOG_LEVEL`, `MONEY_MANAGER_SESSION_PERSIST`.
+Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`, `MONEY_MANAGER_RETRY_COUNT`, `MONEY_MANAGER_LOG_LEVEL`, `MONEY_MANAGER_SESSION_PERSIST`.
 
 ## Coding Conventions
 
@@ -118,9 +100,7 @@ Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`,
 - **Files** are `kebab-case`; **types/interfaces** are `PascalCase`; **tool names**
   are `snake_case` (`{category}_{action}`, e.g. `transaction_create`).
 - Prefer `const` over `let`. Match the existing comment density and JSDoc style.
-- **Errors:** throw the appropriate `McpError` subclass from `src/errors` (e.g.
-  `NetworkError`, `APIError`, `FileError`). `retryable`/`category` drive retry and
-  logging; FastMCP surfaces the message to the client as an `isError` result.
+- **Errors:** throw the appropriate `McpError` subclass from `src/errors` (e.g. `NetworkError`, `APIError`, `FileError`). `retryable`/`category` drive retry and logging; FastMCP surfaces the message to the client as an `isError` result.
 
 ## Adding / Modifying a Tool
 
@@ -138,15 +118,9 @@ Do not touch `src/index.ts` when adding a tool — the registry loop already cov
 
 The Money Manager HTTP API is unusual. Respect these when writing handlers:
 
-- **Response format is not JSON.** Most endpoints return JavaScript object-literal
-  syntax (single quotes, unquoted keys). The HTTP client parses it (JSON.parse →
-  literal-to-JSON conversion → `new Function(...)` fallback, which is safe because
-  the source is the trusted local API, never user input). Transaction lists come
-  back as **XML**, parsed via `client.getXml()`.
+- **Response format is not JSON.** Most endpoints return JavaScript object-literal syntax (single quotes, unquoted keys). The HTTP client parses it (JSON.parse → literal-to-JSON conversion → `new Function(...)` fallback, which is safe because the source is the trusted local API, never user input). Transaction lists come back as **XML**, parsed via `client.getXml()`.
 - **All endpoints are under `/moneyBook`** (the client prepends it).
-- **`transfer_update` does not update in place** — the server creates a new transfer
-  with a new ID and the old one becomes invalid. The handler's result message warns
-  about this; keep that warning.
+- **`transfer_update` does not update in place** — the server creates a new transfer with a new ID and the old one becomes invalid. The handler's result message warns about this; keep that warning.
 - **`transaction_list` can hang** on date ranges with no transactions (server bug).
   `NetworkError.timeoutForTransactionList` carries a hint about it.
 - **Excel export returns HTML-based `.xls`**, not real XLSX. `.xlsx` paths are
@@ -174,7 +148,4 @@ The Money Manager HTTP API is unusual. Respect these when writing handlers:
 
 ## Project Philosophy
 
-Small, readable, correct. One definition per tool. The Zod schema is the source of
-truth; types and advertised schemas flow from it. Handlers stay pure and transport-
-agnostic. The HTTP client absorbs the upstream API's quirks once, so handlers read
-like straightforward request/response code.
+Small, readable, correct. One definition per tool. The Zod schema is the source of truth; types and advertised schemas flow from it. Handlers stay pure and transport-agnostic. The HTTP client absorbs the upstream API's quirks once, so handlers read like straightforward request/response code.
