@@ -112,7 +112,7 @@ function succeeded(response: ApiOperationResponse): boolean {
 }
 
 /** Coerces the API's string/number money values into a number. */
-export function toNumber(value: unknown): number {
+function toNumber(value: unknown): number {
   if (typeof value === "number") return value;
   if (typeof value === "string") return parseFloat(value) || 0;
   return 0;
@@ -545,7 +545,7 @@ type ToolDefinition<A = unknown> = {
 };
 
 /** Erased tool definition (the args type is enforced per-handler, not here). */
-export type AnyToolDefinition = ToolDefinition<unknown>;
+type AnyToolDefinition = ToolDefinition<unknown>;
 
 /**
  * All tools, each defined once: name + description + Zod schema (auto-advertised
@@ -553,13 +553,6 @@ export type AnyToolDefinition = ToolDefinition<unknown>;
  * type — each entry is fully type-checked against its own schema's input above.
  */
 export const TOOLS: AnyToolDefinition[] = ([
-  {
-    name: "init_get_data",
-    description:
-      "Retrieves initial application data including categories, payment types, asset groups, and multi-book configuration.",
-    schema: InitGetDataInputSchema,
-    handler: handleInitGetData,
-  },
   {
     name: "init_get_data",
     description:

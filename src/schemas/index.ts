@@ -76,9 +76,7 @@ export type InitGetDataInput = z.infer<typeof InitGetDataInputSchema>;
  * Income/Expense code
  */
 export const InOutCodeSchema = z.enum(["0", "1"], {
-  errorMap: () => ({
-    message: "inOutCode must be '0' (Income) or '1' (Expense)",
-  }),
+  message: "inOutCode must be '0' (Income) or '1' (Expense)",
 });
 
 /**
@@ -341,12 +339,4 @@ export const DashboardGetAssetChartInputSchema = z.object({
 export type DashboardGetAssetChartInput = z.infer<
   typeof DashboardGetAssetChartInputSchema
 >;
-
-// ============================================================================
-// Backup Schemas — removed
-// ----------------------------------------------------------------------------
-// backup_download / backup_restore were intentionally removed: they operate on
-// the raw SQLite database and are too dangerous to expose via MCP. No schema or
-// handler is registered for them.
-// ============================================================================
 

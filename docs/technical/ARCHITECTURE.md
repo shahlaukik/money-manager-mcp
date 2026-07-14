@@ -201,7 +201,6 @@ The Money Manager API returns HTML-based `.xls` files (not true XLSX format). Th
 enum ErrorCategory {
   NETWORK = "NETWORK", // Connection failures, timeouts
   API = "API", // API returned error response
-  VALIDATION = "VALIDATION", // Input validation failures
   SESSION = "SESSION", // Authentication/session issues
   FILE = "FILE", // File system errors
   INTERNAL = "INTERNAL", // Unexpected errors

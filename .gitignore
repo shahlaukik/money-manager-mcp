@@ -28,6 +28,9 @@ docs-local/
 *~
 .DS_Store
 
+# Local agent tooling (ZCode session/plan state)
+.zcode/
+
 # Test coverage
 coverage/
 
