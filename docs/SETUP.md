@@ -291,10 +291,12 @@ Should complete without errors.
 ### 2. Test the Server Starts
 
 ```bash
-npm start
+npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
 ```
 
-The server should start without errors. It will wait for MCP client connections via stdio.
+The server should start and log its base URL to stderr. It then waits for an MCP
+client connection via stdio (there is no HTTP port). The `--baseUrl` value must
+point at your running Money Manager web server.
 
 ### 3. Test MCP Connection
 
@@ -354,7 +356,7 @@ The Money Manager app runs on your local network. Common ways to find it:
 For verbose logging, set the log level to debug:
 
 ```bash
-MONEY_MANAGER_LOG_LEVEL=debug npm start
+MONEY_MANAGER_LOG_LEVEL=debug npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
 ```
 
 Or in your environment configuration:

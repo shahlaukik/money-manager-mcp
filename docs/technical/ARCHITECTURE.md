@@ -211,7 +211,7 @@ enum ErrorCategory {
 
 Handlers throw `McpError` subclasses (`NetworkError`, `APIError`, etc.). FastMCP
 catches these and returns them to the client as native MCP tool results with
-`isError: true`. The structured `{ code, category, retryable }` metadata is an
+`isError: true`. The structured `{ category, retryable }` metadata is an
 internal taxonomy used for logging and retry decisions; the client-facing error
 payload is the error's message plus the `isError` flag.
 
@@ -328,7 +328,7 @@ interface Transaction {
 // Asset
 interface Asset {
   assetId: string;
-  assetGroupId: string;
+  assetGroupId?: string;
   assetType: "group" | "item";
   assetName: string;
   assetMoney: number;
@@ -352,8 +352,9 @@ There is no automated test suite. The server is verified by:
 1. `npm run build` — TypeScript strict compilation
 2. `npm run lint` — ESLint
 3. Manual testing with an MCP-compatible client (Claude Desktop, VS Code)
-4. Handlers are pure `(client, args) → object` functions, so they can be
-   unit-tested against a mocked `HttpClient` without a live server.
+
+Handlers are pure `(client, args) → object` functions, so they can be unit-tested
+against a mocked `HttpClient` without a live server, but no such tests are included.
 
 ### Debug Mode
 
@@ -362,15 +363,3 @@ Set `MONEY_MANAGER_LOG_LEVEL=debug` for verbose logging:
 ```bash
 MONEY_MANAGER_LOG_LEVEL=debug node dist/index.js
 ```
-
----
-
-## 11. Future Enhancements
-
-Potential improvements for future versions:
-
-1. **MCP Resources**: Expose assets and categories as browsable resources
-2. **MCP Prompts**: Pre-built prompts for common financial queries
-3. **Caching**: Cache initialization data for faster subsequent calls
-4. **Batch Operations**: Support bulk transaction creation
-5. **Unit Tests**: Comprehensive test suite with mocked responses

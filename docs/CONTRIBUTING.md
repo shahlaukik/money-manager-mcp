@@ -2,6 +2,16 @@
 
 Thank you for your interest in contributing to the Money Manager MCP server! This document provides guidelines and instructions for contributing.
 
+## Project Philosophy
+
+This project aims to be small, readable, and correct:
+
+- **One definition per tool.** Each tool is defined exactly once (Zod schema + handler) in `src/tools/handlers.ts`. FastMCP derives validation, schema advertising, and dispatch from that single definition — there is no hand-maintained JSON Schema and no duplicate registration.
+- **The Zod schema is the source of truth.** Input types are inferred from it; advertised tool schemas flow from it.
+- **Handlers stay pure and transport-agnostic.** A handler is a `(client, args) → domain object` function. It never imports FastMCP or formats MCP content — that wrapping happens once in `src/index.ts`.
+- **Absorb upstream quirks once.** The HTTP client handles the Money Manager API's unusual formats (JS literals, XML, HTML-based Excel) so handlers read like straightforward code.
+- **No speculative features.** Document and build only what exists.
+
 ## Code of Conduct
 
 Please be respectful and constructive in all interactions. We're building this project for the community.
@@ -37,9 +47,8 @@ Please be respectful and constructive in all interactions. We're building this p
 ### Prerequisites
 
 - Node.js >= 18.0.0
-- npm >= 9.0.0
 - Git
-- A running Money Manager server (for integration testing)
+- A running Money Manager web server on your phone (for integration testing) — see [SETUP.md](./SETUP.md)
 
 ### Getting Started
 
@@ -51,15 +60,15 @@ cd money-manager-mcp
 # Install dependencies
 npm install
 
-# Create environment file
+# (Optional) Create an environment file
 cp .env.example .env
 # Edit .env with your configuration
 
 # Build the project
 npm run build
 
-# Run in development mode
-npm run dev
+# Run in development mode (pass your Money Manager base URL)
+npm run dev -- --baseUrl http://YOUR_PHONE_IP:PORT
 ```
 
 ### Project Scripts
@@ -197,16 +206,46 @@ from the Zod schema and validates inputs automatically.
    },
    ```
 
-3. **Add documentation** in `docs/USAGE.md`
+3. **Add documentation** in `docs/USAGE.md` and update the tool table in `README.md` if names/counts change.
+
+## Commit Message Conventions
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/). Keep
+the subject line concise and imperative:
+
+```text
+<type>: <short description>
+
+feat: add budget overview tool
+fix: handle empty date range in transaction_list
+docs: clarify session persistence in SETUP
+refactor: simplify JS-literal response parsing
+chore: bump dependencies
+```
+
+Common types: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`.
+
+## Testing
+
+There is no automated test suite today. Until one exists, changes are verified by:
+
+1. **`npm run build`** — TypeScript strict compilation must pass (the primary gate).
+2. **`npm run lint`** — ESLint must pass.
+3. **Manual testing** against a live Money Manager server through an MCP client
+   (Claude Desktop, VS Code with Copilot, etc.).
+
+Handlers are pure `(client, args) → object` functions, so they are straightforward to
+unit-test against a mocked `HttpClient` if you choose to add tests for your change.
 
 ## Pull Request Process
 
 ### Before Submitting
 
 1. **Build passes**: `npm run build` succeeds
-2. **Code is formatted**: `npm run format`
-3. **Linting passes**: `npm run lint`
-4. **Changes are tested**: Manual testing with MCP client
+2. **Linting passes**: `npm run lint`
+3. **Code is formatted**: `npm run format`
+4. **Docs updated** if behavior, tools, or config changed
+5. **Manually verified** against a live Money Manager server (see [Testing](#testing))
 
 ### PR Guidelines
 
