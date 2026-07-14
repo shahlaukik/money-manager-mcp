@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as path from "path";
 
 /**
  * Zod schemas for input validation
@@ -172,15 +173,39 @@ export type SummaryGetPeriodInput = z.infer<typeof SummaryGetPeriodInputSchema>;
 
 /**
  * Input schema for summary_export_excel tool
+ *
+ * `outputPath` must resolve inside the server's working directory. This stops
+ * a caller from exporting financial data to an arbitrary location (e.g.
+ * `../../../../etc/...` or an absolute path) — only a relative path under the
+ * cwd is accepted. The check runs in validation so a malicious or
+ * prompt-injected client is rejected before the handler runs.
  */
-export const SummaryExportExcelInputSchema = z.object({
-  startDate: DateSchema,
-  endDate: DateSchema,
-  mbid: MbidSchema,
-  assetId: z.string().optional(),
-  inOutType: z.string().optional(),
-  outputPath: NonEmptyString,
-});
+export const SummaryExportExcelInputSchema = z
+  .object({
+    startDate: DateSchema,
+    endDate: DateSchema,
+    mbid: MbidSchema,
+    assetId: z.string().optional(),
+    inOutType: z.string().optional(),
+    outputPath: NonEmptyString,
+  })
+  .refine(
+    (data) => {
+      const resolved = path.resolve(process.cwd(), data.outputPath);
+      const cwd = process.cwd();
+      // `resolved` must equal cwd or live directly under it (with a separator).
+      return (
+        resolved === cwd ||
+        resolved.startsWith(cwd + path.sep) ||
+        resolved.startsWith(cwd + "/")
+      );
+    },
+    {
+      message:
+        "outputPath must be a relative path inside the working directory (absolute paths and parent-directory traversal are not allowed).",
+      path: ["outputPath"],
+    },
+  );
 
 export type SummaryExportExcelInput = z.infer<
   typeof SummaryExportExcelInputSchema

@@ -13,6 +13,11 @@ import {
   wrapError,
   type McpError,
 } from "../errors/index.js";
+import {
+  isIdentPart,
+  isIdentStart,
+  isWhitespaceChar,
+} from "./identifiers.js";
 
 /**
  * HTTP client with cookie/session management for the Money Manager API.
@@ -240,9 +245,10 @@ export class HttpClient {
    *
    * The Money Manager API returns JS literal syntax (single quotes, unquoted
    * property names) instead of valid JSON. We try JSON.parse first, then
-   * convert the literal to JSON, then — as a last resort — evaluate the
-   * literal. The eval fallback is safe here: this is only data from our known
-   * local-network API, never user input.
+   * convert the literal to JSON via a non-evaluating tokenizer. Parsing never
+   * falls back to `eval`/`new Function`: response text is only ever parsed as
+   * data, so it cannot trigger code execution even if a server is malicious
+   * or compromised.
    */
   private parseJsLiteralResponse<T>(responseText: string): T {
     if (!responseText || responseText.trim() === "") {
@@ -255,43 +261,96 @@ export class HttpClient {
       try {
         return JSON.parse(this.convertJsLiteralToJson(responseText)) as T;
       } catch (conversionError) {
-        try {
-          // Wrap in parentheses to make it an expression.
-          return new Function(`return (${responseText});`)() as T;
-        } catch {
-          this.log(
-            "error",
-            "Failed to parse response:",
-            responseText.substring(0, 200),
-          );
-          throw new APIError(
-            `Failed to parse API response: ${String(conversionError)}`,
-          );
-        }
+        this.log(
+          "error",
+          "Failed to parse response:",
+          responseText.substring(0, 200),
+        );
+        throw new APIError(
+          `Failed to parse API response: ${String(conversionError)}`,
+        );
       }
     }
   }
 
   /**
-   * Converts JavaScript object-literal syntax to valid JSON:
-   * single quotes -> double quotes, unquoted keys -> quoted keys.
+   * Converts JavaScript object-literal syntax to valid JSON by tokenizing the
+   * input in a single string-aware pass: single-quoted strings are re-emitted
+   * as double-quoted JSON strings, and unquoted property names are quoted.
+   *
+   * Unlike a regex pass, this respects string boundaries (so quotes or colons
+   * inside string values are left alone) and — importantly — it never
+   * evaluates the input. Malformed input throws rather than reaching an
+   * `eval`/`new Function` fallback, so untrusted response text cannot execute.
    */
   private convertJsLiteralToJson(jsLiteral: string): string {
-    let result = jsLiteral;
+    const out: string[] = [];
+    let i = 0;
+    const n = jsLiteral.length;
 
-    // Single quotes -> double quotes (works for this API's format).
-    result = result.replace(/'/g, '"');
+    while (i < n) {
+      const ch = jsLiteral[i]!;
 
-    // Quote unquoted property names after { , or [ .
-    result = result.replace(
-      /([{,[\s])([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g,
-      '$1"$2":',
-    );
+      // String literal (single- or double-quoted).
+      if (ch === "'" || ch === '"') {
+        const quote = ch;
+        let body = "";
+        i++; // consume opening quote
+        while (i < n) {
+          const c = jsLiteral[i]!;
+          if (c === "\\") {
+            const next = jsLiteral[i + 1];
+            if (next === "'") {
+              // \' is valid in JS but not JSON — normalize to a plain quote.
+              body += "'";
+              i += 2;
+            } else {
+              // Preserve other escapes (\n, \t, \\, \", \uXXXX, …) verbatim;
+              // they are valid in JSON string bodies.
+              body += "\\" + (next ?? "");
+              i += 2;
+            }
+            continue;
+          }
+          if (c === quote) {
+            i++; // consume closing quote
+            break;
+          }
+          body += c;
+          i++;
+        }
+        // Re-serialize as a valid JSON string (handles quoting/escaping).
+        out.push(JSON.stringify(body));
+        continue;
+      }
 
-    // Clean up double-double quotes that the above may have created.
-    result = result.replace(/""/g, '"');
+      // Identifier outside a string: a property key or a bare keyword.
+      if (isIdentStart(ch)) {
+        let ident = ch;
+        i++;
+        while (i < n && isIdentPart(jsLiteral[i]!)) {
+          ident += jsLiteral[i];
+          i++;
+        }
+        // Look ahead past whitespace to see whether this is a key.
+        let j = i;
+        while (j < n && isWhitespaceChar(jsLiteral[j]!)) j++;
+        if (jsLiteral[j] === ":") {
+          out.push(JSON.stringify(ident));
+        } else {
+          // Bare value (true/false/null). Passed through verbatim; JSON.parse
+          // rejects anything else rather than the input being evaluated.
+          out.push(ident);
+        }
+        continue;
+      }
 
-    return result;
+      // Numbers, punctuation, and whitespace pass through unchanged.
+      out.push(ch);
+      i++;
+    }
+
+    return out.join("");
   }
 
   // ----------------------------------------------------------------- utilities
