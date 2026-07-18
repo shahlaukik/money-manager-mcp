@@ -66,6 +66,17 @@ async function main(): Promise<void> {
   const server = new FastMCP({
     name: "money-manager-mcp",
     version: packageJson.version as `${number}.${number}.${number}`,
+    // Sent to clients in the MCP initialize handshake so models reach the
+    // critical usage contract without access to the repo's docs/ or AGENTS.md
+    // (end users install via `npx money-manager-mcp@latest`). Keep concise.
+    instructions: [
+      "Personal-finance server backed by the Realbyte Money Manager Android app's PC Manager web server (same-Wi-Fi, single book).",
+      "ALWAYS call `init_get_data` first: it returns the `mbid` plus the category IDs (`mcid`), payment-type names, and asset group IDs that the create/update/transfer tools require. These IDs are not guessable and most create/update failures come from using a wrong/imagined ID.",
+      "The four create tools — `transaction_create`, `asset_create`, `card_create`, `transfer_create` — return `{success, message}` with NO new id (upstream API limitation). To get the id of what you just created, call the matching `_list` tool afterward.",
+      "`transfer_update` does NOT update in place: the server creates a NEW transfer with a NEW id and invalidates the old one. Find the new id via `transaction_list` filtered by the source asset and date (look for the inOutCode '3' Transfer-Out row).",
+      "There is no `card_delete` tool (the upstream API has no card-delete endpoint); a card can only be removed manually in the app.",
+      "`transaction_list` can time out on date ranges that contain no transactions (upstream bug) — narrow the range or confirm data exists first.",
+    ].join("\n"),
   });
 
   registerTools(server, httpClient);

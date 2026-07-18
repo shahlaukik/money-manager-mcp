@@ -562,13 +562,15 @@ export const TOOLS: AnyToolDefinition[] = ([
   },
   {
     name: "transaction_list",
-    description: "Lists transactions within a date range.",
+    description:
+      "Lists transactions within a date range. NOTE: the upstream server has a known bug where this call can hang/time out on ranges that contain no transactions — if a call times out, narrow the range or confirm the range contains data first. Transfers appear as two rows: a Transfer-Out (inOutCode '3', negative amount) on the source asset and a Transfer-In (inOutCode '4', positive) on the destination.",
     schema: TransactionListInputSchema,
     handler: handleTransactionList,
   },
   {
     name: "transaction_create",
-    description: "Creates a new income or expense transaction.",
+    description:
+      "Creates a new income or expense transaction. Returns {success, message} but NOT the new transaction ID — the upstream API does not return it. Call transaction_list (filtered by date/asset) afterward to discover the new record's id. Use IDs/mcids/payment-type names from init_get_data.",
     schema: TransactionCreateInputSchema,
     handler: handleTransactionCreate,
   },
@@ -605,7 +607,8 @@ export const TOOLS: AnyToolDefinition[] = ([
   },
   {
     name: "asset_create",
-    description: "Creates a new asset/account.",
+    description:
+      "Creates a new asset/account. Returns {success, message} but NOT the new asset ID — the upstream API does not return it. Call asset_list afterward to discover the new asset's id. Use assetGroupId values from init_get_data.",
     schema: AssetCreateInputSchema,
     handler: handleAssetCreate,
   },
@@ -629,7 +632,8 @@ export const TOOLS: AnyToolDefinition[] = ([
   },
   {
     name: "card_create",
-    description: "Creates a new credit card.",
+    description:
+      "Creates a new credit card. Returns {success, message} but NOT the new card ID — the upstream API does not return it. Call card_list afterward to discover the new card's id. linkAssetId/linkAssetName must be an existing payment asset from init_get_data. NOTE: there is no card_delete tool (the upstream API exposes no delete endpoint), so created cards cannot be removed programmatically.",
     schema: CardCreateInputSchema,
     handler: handleCardCreate,
   },
@@ -641,14 +645,15 @@ export const TOOLS: AnyToolDefinition[] = ([
   },
   {
     name: "transfer_create",
-    description: "Transfers money between two assets.",
+    description:
+      "Transfers money between two assets. Returns {success, message} but NOT the new transfer ID — the upstream API does not return it. Call transaction_list (filtered by from-asset and date, looking for inOutCode '3' Transfer-Out rows) afterward to discover the new transfer's id.",
     schema: TransferCreateInputSchema,
     handler: handleTransferCreate,
   },
   {
     name: "transfer_update",
     description:
-      "Modifies an existing transfer. WARNING: The server creates a new transfer with a NEW ID instead of updating in-place. The old ID will no longer exist after update. Use transaction_list to get the new ID if needed.",
+      "Modifies an existing transfer. WARNING: The upstream API does NOT update in-place — it creates a NEW transfer with a NEW ID and invalidates the old one. The response includes this warning; to find the new ID afterward, call transaction_list filtered by the from-asset and date (look for inOutCode '3' Transfer-Out rows). Pass the Transfer-Out row's id as the transfer's logical id.",
     schema: TransferUpdateInputSchema,
     handler: handleTransferUpdate,
   },

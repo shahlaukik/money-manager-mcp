@@ -77,6 +77,8 @@ Creates a new income or expense transaction.
 | `mbContent` | string | No | Description |
 | `mbDetailContent` | string | No | Detailed notes |
 
+**Returns:** `{success, message}` — **does NOT return the new transaction ID** (the upstream API omits it). To obtain the new ID, call `transaction_list` filtered by date and `assetId` immediately after.
+
 **Example prompts:**
 
 - "Record a $50 grocery expense from my checking account"
@@ -180,6 +182,8 @@ Creates a new asset/account.
 | `linkAssetId` | string | No | Linked asset ID |
 | `linkAssetName` | string | No | Linked asset name |
 
+**Returns:** `{success, message}` — **does NOT return the new asset ID** (the upstream API omits it). To obtain the new ID, call `asset_list` immediately after.
+
 **Example prompts:**
 
 - "Create a new savings account with $5000 balance"
@@ -247,6 +251,10 @@ Creates a new credit card.
 | `jungsanDay` | number | No | Balance calculation day (1-31) |
 | `paymentDay` | number | No | Payment due day (1-31) |
 
+**Returns:** `{success, message}` — **does NOT return the new card ID** (the upstream API omits it). To obtain the new ID, call `card_list` immediately after.
+
+> ⚠️ **Cards cannot be deleted.** The upstream Money Manager API exposes no card-delete endpoint, so there is no `card_delete` tool. A card created here can only be removed manually in the Android app.
+
 **Example prompts:**
 
 - "Add a new Visa credit card linked to my checking account"
@@ -285,6 +293,8 @@ Transfers money between assets.
 | `moneyContent` | string | No | Description |
 | `mbDetailContent` | string | No | Detailed notes |
 
+**Returns:** `{success, message}` — **does NOT return the new transfer ID** (the upstream API omits it). A transfer appears as two rows in `transaction_list`: a `Transfer-Out` (inOutCode `3`, negative amount) on the source asset and a `Transfer-In` (inOutCode `4`, positive amount) on the destination. To find the new transfer's ID, call `transaction_list` filtered by the source asset and date, and read the `Transfer-Out` row's `id`.
+
 **Example prompts:**
 
 - "Transfer $500 from savings to checking"
@@ -297,9 +307,9 @@ Modifies an existing transfer.
 **Parameters:** Same as `transfer_create`, plus:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string | Yes | Transfer ID |
+| `id` | string | Yes | Transfer ID (the `Transfer-Out` row's id) |
 
-**Note:** The server creates a new transfer with a new ID; the old ID will no longer exist.
+> ⚠️ **Does not update in place.** The upstream API creates a **new** transfer with a **new ID** and invalidates the old one. The response includes this warning. After updating, call `transaction_list` (filtered by the source asset and date, look for the `Transfer-Out` row) to get the new ID — the `id` you passed is no longer valid.
 
 ---
 
@@ -380,6 +390,22 @@ Retrieves historical chart data for a specific asset.
 
 ---
 
+## Known limitations
+
+These are inherent to the upstream Money Manager HTTP API, not the MCP server. They affect how you sequence calls:
+
+1. **Create calls do not return the new ID.** `transaction_create`, `asset_create`, `card_create`, and `transfer_create` return `{success, message}` only — the upstream endpoints omit the created record's ID from their response. To get the new ID, follow up with the matching `_list` tool. Each create tool's description notes the right follow-up call and filter.
+
+2. **`transfer_update` creates a new transfer instead of updating in place.** The old transfer ID becomes invalid; the API generates a fresh one. The response carries a warning. Find the new ID via `transaction_list` (source asset + date, look at the `Transfer-Out` row).
+
+3. **Credit cards cannot be deleted.** The upstream API exposes no card-delete endpoint, so there is no `card_delete` tool. Remove a card manually in the Money Manager Android app.
+
+4. **Excel export is HTML-based `.xls`, not real XLSX.** If you pass a `.xlsx` path it is auto-corrected to `.xls` with a warning, since the server's HTML-based Excel format only opens cleanly as `.xls`.
+
+5. **`transaction_list` can hang on empty date ranges.** This is a known upstream server bug. If a list call times out, narrow the range or confirm it contains data first.
+
+---
+
 ## Troubleshooting
 
 **"Asset/Category not found"**
@@ -397,6 +423,10 @@ Retrieves historical chart data for a specific asset.
 - Ensure all required fields are provided
 - Check that the asset and category exist
 - Verify the amount is a positive number
+
+**"I need the ID of something I just created"**
+
+- The create tools do not return the new ID (upstream API limitation). Call the matching `_list` tool right after: `transaction_list`, `asset_list`, or `card_list`. For transfers, filter `transaction_list` by the source asset and date and read the `Transfer-Out` row.
 
 **"Export failed"**
 
