@@ -16,7 +16,8 @@ A phone running the Money Manager app and the computer running the server must b
 src/
 ├── index.ts          # Server bootstrap — thin; wires FastMCP + HTTP client + stdio
 ├── client/
-│   └── http-client.ts  # axios + cookie sessions, retry, XML & JS-literal parsing
+│   ├── http-client.ts  # axios + cookie sessions, retry, XML & JS-literal parsing
+│   └── identifiers.ts  # character classifiers used by the JS-literal parser
 ├── config/
 │   └── index.ts      # Layered config: CLI > env > .money-manager-mcp.json > defaults
 ├── errors/
@@ -102,7 +103,7 @@ Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`, `MONEY_MA
 - **Files** are `kebab-case`; **types/interfaces** are `PascalCase`; **tool names**
   are `snake_case` (`{category}_{action}`, e.g. `transaction_create`).
 - Prefer `const` over `let`. Match the existing comment density and JSDoc style.
-- **Errors:** throw the appropriate `McpError` subclass from `src/errors` (e.g. `NetworkError`, `APIError`, `FileError`). `retryable`/`category` drive retry and logging; FastMCP surfaces the message to the client as an `isError` result.
+- **Errors:** throw the appropriate `McpError` subclass from `src/errors` (e.g. `NetworkError`, `APIError`, `FileError`). `retryable` drives the HTTP client's retry decisions; FastMCP surfaces the message to the client as an `isError` result — the message is the only client-facing payload, so anything the client should see must be part of it.
 
 ## Adding / Modifying a Tool
 
@@ -125,7 +126,7 @@ The Money Manager HTTP API is unusual. Respect these when writing handlers:
 - **Dates are date-only.** The API silently accepts `YYYY-MM-DDTHH:mm:ss` values, but the app records them as 12:00 AM — the time is never persisted (verified against a live server). All schemas use `DateSchema`; do not add datetime support.
 - **`transfer_update` does not update in place** — the server creates a new transfer with a new ID and the old one becomes invalid. The handler's result message warns about this; keep that warning.
 - **`transaction_list` can hang** on date ranges with no transactions (server bug).
-  `NetworkError.timeoutForTransactionList` carries a hint about it.
+  `NetworkError.timeoutForTransactionList` carries the hint in its message.
 - **Excel export returns HTML-based `.xls`**, not real XLSX. `.xlsx` paths are
   auto-corrected to `.xls`.
 - **Backup/restore endpoints** (`/uploadSqlFile`, `/money.sqlite`) exist upstream

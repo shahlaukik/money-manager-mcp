@@ -16,7 +16,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local docs and prompts
-docs-local/
 .github/prompts/
 
 # IDE and editor files
@@ -30,9 +29,6 @@ docs-local/
 
 # Local agent tooling (ZCode session/plan state)
 .zcode/
-
-# Test coverage
-coverage/
 
 # TypeScript cache
 *.tsbuildinfo
@@ -50,9 +46,6 @@ cookies.json
 # Exported files with financial data
 *.xls
 *.xlsx
-
-# Debug files
-response.txt
 
 # Backup files created during testing
 *.sqlite

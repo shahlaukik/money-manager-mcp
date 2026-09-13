@@ -29,13 +29,6 @@ export const NonEmptyString = z.string().min(1, "String cannot be empty");
 export const PositiveNumber = z.number().positive("Number must be positive");
 
 /**
- * Non-negative number (zero or positive)
- */
-export const NonNegativeNumber = z
-  .number()
-  .min(0, "Number must be non-negative");
-
-/**
  * Money book ID
  */
 export const MbidSchema = z.string().min(1, "Money book ID is required");

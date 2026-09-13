@@ -199,7 +199,7 @@ everywhere.
 **Response Format:** XML
 
 ```xml
-<data>
+<dataset>
   <results>count</results>
   <row>
     <id>string</id>
@@ -218,7 +218,7 @@ everywhere.
     <inOutType>string</inOutType>
     <mbDetailContent>string</mbDetailContent>
   </row>
-</data>
+</dataset>
 ```
 
 **inOutCode Values:**

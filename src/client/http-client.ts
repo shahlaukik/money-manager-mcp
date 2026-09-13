@@ -1,8 +1,4 @@
-import axios, {
-  type AxiosInstance,
-  type AxiosError,
-  type AxiosResponse,
-} from "axios";
+import axios, { type AxiosInstance, type AxiosResponse } from "axios";
 import { wrapper } from "axios-cookiejar-support";
 import { CookieJar } from "tough-cookie";
 import * as fs from "node:fs/promises";
@@ -128,15 +124,9 @@ export class HttpClient {
     endpoint: string,
     params?: Record<string, string | number | undefined>,
   ): Promise<T> {
-    const response = await this.executeWithRetry<string>(
-      () =>
-        this.client.get<string>(endpoint, {
-          params: this.filterUndefined(params),
-          responseType: "text",
-        }),
-      true,
+    return this.getText(endpoint, params, (body) =>
+      this.parseJsLiteralResponse<T>(body),
     );
-    return this.parseJsLiteralResponse<T>(response.data);
   }
 
   /** GET request expecting an XML response (transaction list). */
@@ -144,16 +134,34 @@ export class HttpClient {
     endpoint: string,
     params?: Record<string, string | number | undefined>,
   ): Promise<T> {
+    return this.getText(
+      endpoint,
+      params,
+      (body) => this.parseXmlResponse<T>(body),
+      "text/xml",
+    );
+  }
+
+  /**
+   * Shared GET plumbing: an idempotent (retryable) text request with
+   * undefined params stripped; the caller picks the body parser.
+   */
+  private async getText<T>(
+    endpoint: string,
+    params: Record<string, string | number | undefined> | undefined,
+    parse: (body: string) => T | Promise<T>,
+    accept?: string,
+  ): Promise<T> {
     const response = await this.executeWithRetry<string>(
       () =>
         this.client.get<string>(endpoint, {
           params: this.filterUndefined(params),
           responseType: "text",
-          headers: { Accept: "text/xml" },
+          headers: accept ? { Accept: accept } : undefined,
         }),
       true,
     );
-    return this.parseXmlResponse<T>(response.data);
+    return parse(response.data);
   }
 
   /**
@@ -230,7 +238,7 @@ export class HttpClient {
   /** Maps axios errors to the appropriate McpError subclass. */
   private handleResponseError(error: unknown): Promise<never> {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
+      const axiosError = error;
 
       // Network errors (no response received)
       if (!axiosError.response) {
@@ -258,7 +266,7 @@ export class HttpClient {
             axiosError.message,
           );
         }
-        throw new NetworkError(axiosError.message, { code: axiosError.code });
+        throw new NetworkError(axiosError.message);
       }
 
       const status = axiosError.response.status;

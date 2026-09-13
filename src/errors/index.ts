@@ -3,63 +3,37 @@
  *
  * Handlers and the HTTP client throw these subclasses; FastMCP catches them and
  * surfaces them to the client as native MCP tool results with `isError: true`.
- * The `category` / `retryable` metadata drives logging and retry decisions
- * internally; the client-facing payload is the error message.
+ * The message is the only client-facing payload — anything the client should
+ * see (guidance, causes) must be part of it. The `retryable` flag drives the
+ * HTTP client's retry decisions.
  */
-
-/** Error categories, used for logging and retry logic. */
-export enum ErrorCategory {
-  NETWORK = "NETWORK",
-  API = "API",
-  SESSION = "SESSION",
-  FILE = "FILE",
-  INTERNAL = "INTERNAL",
-}
 
 /** Base class for all Money Manager errors. */
 export class McpError extends Error {
-  public readonly category: ErrorCategory;
   public readonly retryable: boolean;
 
-  constructor(
-    category: ErrorCategory,
-    message: string,
-    retryable = false,
-    public readonly details?: Record<string, unknown>,
-  ) {
+  constructor(message: string, retryable = false) {
     super(message);
     this.name = "McpError";
-    this.category = category;
     this.retryable = retryable;
   }
 }
 
 /** Network-related errors (connection failures, timeouts). Retryable by default. */
 export class NetworkError extends McpError {
-  constructor(
-    message: string,
-    details?: Record<string, unknown>,
-    retryable = true,
-  ) {
-    super(ErrorCategory.NETWORK, message, retryable, details);
+  constructor(message: string, retryable = true) {
+    super(message, retryable);
     this.name = "NetworkError";
   }
 
-  static timeout(url: string, timeoutMs: number, hint?: string): NetworkError {
-    return new NetworkError(
-      `Request to ${url} timed out after ${timeoutMs}ms`,
-      {
-        url,
-        timeoutMs,
-        errorType: "TIMEOUT",
-        hint,
-      },
-    );
+  static timeout(url: string, timeoutMs: number): NetworkError {
+    return new NetworkError(`Request to ${url} timed out after ${timeoutMs}ms`);
   }
 
   /**
-   * Timeout error with a hint specific to transaction_list: the Money Manager
-   * server has a known bug where it hangs on date ranges with no transactions.
+   * Timeout error with a message specific to transaction_list: the Money Manager
+   * server has a known bug where it hangs on date ranges with no transactions,
+   * so the guidance is folded into the message the client actually sees.
    * Marked non-retryable — the hang never clears on retry, so each attempt
    * would just burn another full timeout before the client sees the hint.
    */
@@ -68,51 +42,32 @@ export class NetworkError extends McpError {
     timeoutMs: number,
   ): NetworkError {
     return new NetworkError(
-      `Request to ${url} timed out after ${timeoutMs}ms`,
-      {
-        url,
-        timeoutMs,
-        errorType: "TIMEOUT",
-        hint:
-          "The Money Manager server may hang when querying date ranges with no transactions. " +
-          "This is a known server-side limitation. Try a date range that has recorded transactions.",
-      },
+      `Request to ${url} timed out after ${timeoutMs}ms. The Money Manager ` +
+        "server may hang when querying date ranges with no transactions — " +
+        "try a date range that has recorded transactions.",
       false,
     );
   }
 
   static connectionRefused(url: string): NetworkError {
-    return new NetworkError(`Connection refused to ${url}`, {
-      url,
-      errorType: "CONNECTION_REFUSED",
-    });
+    return new NetworkError(`Connection refused to ${url}`);
   }
 
   static unreachable(url: string, originalError?: string): NetworkError {
     return new NetworkError(
-      `Cannot connect to Money Manager server at ${url}`,
-      {
-        url,
-        originalError,
-        errorType: "UNREACHABLE",
-      },
+      originalError
+        ? `Cannot connect to Money Manager server at ${url} (${originalError})`
+        : `Cannot connect to Money Manager server at ${url}`,
     );
   }
 }
 
 /** API errors (server returned an error HTTP response). Retryable on 5xx. */
 export class APIError extends McpError {
-  public readonly statusCode?: number;
-
-  constructor(
-    message: string,
-    statusCode?: number,
-    details?: Record<string, unknown>,
-  ) {
+  constructor(message: string, statusCode?: number) {
     const retryable = statusCode !== undefined && statusCode >= 500;
-    super(ErrorCategory.API, message, retryable, { ...details, statusCode });
+    super(message, retryable);
     this.name = "APIError";
-    this.statusCode = statusCode;
   }
 
   static fromStatusCode(statusCode: number, message?: string): APIError {
@@ -137,8 +92,8 @@ export class APIError extends McpError {
  * the same request with the same session cookies cannot fix a 401/403.
  */
 export class SessionError extends McpError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super(ErrorCategory.SESSION, message, false, details);
+  constructor(message: string) {
+    super(message, false);
     this.name = "SessionError";
   }
 
@@ -151,20 +106,15 @@ export class SessionError extends McpError {
 
 /** File system errors (export operations). Not retryable. */
 export class FileError extends McpError {
-  constructor(
-    message: string,
-    public readonly filePath?: string,
-    details?: Record<string, unknown>,
-  ) {
-    super(ErrorCategory.FILE, message, false, { ...details, filePath });
+  constructor(message: string) {
+    super(message, false);
     this.name = "FileError";
   }
 
-  static writeFailed(filePath: string, originalError?: string): FileError {
-    return new FileError(`Cannot write file to '${filePath}'`, filePath, {
-      originalError,
-      operation: "write",
-    });
+  static writeFailed(filePath: string, originalError: string): FileError {
+    return new FileError(
+      `Cannot write file to '${filePath}': ${originalError}`,
+    );
   }
 }
 
@@ -176,8 +126,11 @@ export function isMcpError(error: unknown): error is McpError {
 /**
  * Normalizes an unknown error into an McpError.
  * - McpError instances pass through unchanged.
- * - Common network error codes map to NetworkError.
- * - Anything else becomes an internal error.
+ * - Errors carrying a network errno become retryable NetworkErrors. Axios
+ *   errors are already mapped by the response interceptor before they reach
+ *   this; the errno check covers raw Node errors that bypassed axios.
+ * - Anything else becomes a non-retryable internal error whose message
+ *   includes the original cause (the message is all a client ever sees).
  */
 export function wrapError(error: unknown): McpError {
   if (isMcpError(error)) {
@@ -186,22 +139,16 @@ export function wrapError(error: unknown): McpError {
 
   if (error instanceof Error) {
     const code = (error as Error & { code?: string }).code;
-    if (code === "ECONNREFUSED") {
-      return NetworkError.connectionRefused("unknown");
+    if (
+      code === "ECONNREFUSED" ||
+      code === "ETIMEDOUT" ||
+      code === "ECONNABORTED" ||
+      code === "ENOTFOUND"
+    ) {
+      return new NetworkError(error.message);
     }
-    if (code === "ETIMEDOUT" || code === "ECONNABORTED") {
-      return NetworkError.timeout("unknown", 0);
-    }
-    if (code === "ENOTFOUND") {
-      return NetworkError.unreachable("unknown", error.message);
-    }
-    return new McpError(
-      ErrorCategory.INTERNAL,
-      "An unexpected error occurred",
-      false,
-      { originalError: error.message, stack: error.stack },
-    );
+    return new McpError(`An unexpected error occurred: ${error.message}`);
   }
 
-  return new McpError(ErrorCategory.INTERNAL, String(error));
+  return new McpError(String(error));
 }

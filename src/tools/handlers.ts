@@ -164,31 +164,29 @@ export async function handleTransactionList(
   // xml2js turns `<dataset results="0"></dataset>` (ignoreAttrs) into a string.
   if (typeof raw.dataset === "string") return { count: 0, transactions: [] };
 
-  const count = parseInt(raw.dataset?.results || "0", 10);
-  let transactions: Transaction[] = [];
-
-  if (raw.dataset?.row) {
-    const rows = Array.isArray(raw.dataset.row)
+  const count = parseInt(raw.dataset.results || "0", 10);
+  const rows = raw.dataset.row
+    ? Array.isArray(raw.dataset.row)
       ? raw.dataset.row
-      : [raw.dataset.row];
-    transactions = rows.map((row: RawTransactionRow) => ({
-      id: row.id,
-      mbDate: row.mbDate,
-      assetId: row.assetId,
-      toAssetId: row.toAssetId,
-      targetAssetId: row.targetAssetId,
-      payType: row.payType,
-      mcid: row.mcid,
-      mbCategory: row.mbCategory,
-      mcscid: row.mcscid,
-      subCategory: row.subCategory,
-      mbContent: row.mbContent,
-      mbCash: parseFloat(row.mbCash) || 0,
-      inOutCode: row.inOutCode,
-      inOutType: row.inOutType,
-      mbDetailContent: row.mbDetailContent,
-    }));
-  }
+      : [raw.dataset.row]
+    : [];
+  const transactions: Transaction[] = rows.map((row: RawTransactionRow) => ({
+    id: row.id,
+    mbDate: row.mbDate,
+    assetId: row.assetId,
+    toAssetId: row.toAssetId,
+    targetAssetId: row.targetAssetId,
+    payType: row.payType,
+    mcid: row.mcid,
+    mbCategory: row.mbCategory,
+    mcscid: row.mcscid,
+    subCategory: row.subCategory,
+    mbContent: row.mbContent,
+    mbCash: parseFloat(row.mbCash) || 0,
+    inOutCode: row.inOutCode,
+    inOutType: row.inOutType,
+    mbDetailContent: row.mbDetailContent,
+  }));
 
   return { count, transactions };
 }

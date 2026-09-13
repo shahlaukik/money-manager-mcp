@@ -47,7 +47,8 @@ money-manager-mcp/
 ├── src/
 │   ├── index.ts              # MCP server entry point
 │   ├── client/
-│   │   └── http-client.ts    # HTTP client with session management
+│   │   ├── http-client.ts    # HTTP client with session management
+│   │   └── identifiers.ts    # character classifiers for JS-literal parsing
 │   ├── config/
 │   │   └── index.ts          # Configuration loader
 │   ├── errors/
@@ -166,14 +167,14 @@ A key challenge was parsing the `getInitData` response, which returns JavaScript
 Transaction list responses come in XML format:
 
 ```xml
-<data>
+<dataset>
   <results>2</results>
   <row>
     <id>txn_001</id>
     <mbDate>2025-01-15</mbDate>
     ...
   </row>
-</data>
+</dataset>
 ```
 
 The server uses `xml2js` to parse and transform this to structured JSON.
@@ -190,21 +191,19 @@ The Money Manager API returns HTML-based `.xls` files (not true XLSX format). Th
 
 ## 5. Error Handling
 
-### Error Categories
+### Error Classes
 
-```typescript
-enum ErrorCategory {
-  NETWORK = "NETWORK", // Connection failures, timeouts
-  API = "API", // API returned error response
-  SESSION = "SESSION", // Authentication/session issues
-  FILE = "FILE", // File system errors
-  INTERNAL = "INTERNAL", // Unexpected errors
-}
-```
+| Class          | Meaning                                | Retryable        |
+| -------------- | -------------------------------------- | ---------------- |
+| `NetworkError` | Connection failures, timeouts          | Yes (by default) |
+| `APIError`     | Server returned an error HTTP status   | On 5xx           |
+| `SessionError` | Authentication/session issues          | Never            |
+| `FileError`    | File system errors (exports)           | Never            |
+| `McpError`     | Base class; internal/unexpected errors | Never            |
 
 ### Error Surfacing
 
-Handlers throw `McpError` subclasses (`NetworkError`, `APIError`, etc.). FastMCP catches these and returns them to the client as native MCP tool results with `isError: true`. The structured `{ category, retryable }` metadata is an internal taxonomy used for logging and retry decisions; the client-facing error payload is the error's message plus the `isError` flag.
+Handlers throw `McpError` subclasses (`NetworkError`, `APIError`, etc.). FastMCP catches these and returns them to the client as native MCP tool results with `isError: true`. The message is the only client-facing payload — anything the client should see (e.g. the `transaction_list` timeout hint) is part of the message — while the `retryable` flag drives the HTTP client's retry decisions internally.
 
 Successful results are returned as a single text content block containing the JSON-serialized domain object (e.g. `{ count, transactions }`).
 
