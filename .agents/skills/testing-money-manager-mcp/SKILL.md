@@ -15,26 +15,26 @@ There is no test runner and no CI. This live protocol IS the verification.
 
 ## Tool coverage checklist (all 18 — the final report must account for each)
 
-| #   | Tool                        | Where exercised                             |
-| --- | --------------------------- | ------------------------------------------- |
-| 1   | `init_get_data`             | Phase 0 (first call — baseline context) + 1 |
-| 2   | `transaction_list`          | Phase 0/1, id discovery in Phases 4–5       |
-| 3   | `transaction_create`        | Phase 4                                     |
-| 4   | `transaction_update`        | Phase 4                                     |
-| 5   | `transaction_delete`        | Phase 4 (bulk), Phase 5                     |
-| 6   | `summary_get_period`        | Phase 1                                     |
-| 7   | `summary_export_excel`      | Phase 2 (both `.xls` and `.xlsx` paths)     |
-| 8   | `asset_list`                | Phase 0/1, discovery in Phases 3–5, Phase 7 |
-| 9   | `asset_create`              | Phases 3–4                                  |
-| 10  | `asset_update`              | Phase 3                                     |
-| 11  | `asset_delete`              | Phases 3 and 5                              |
-| 12  | `card_list`                 | Phase 0 (drives card-test decision), 1, 6   |
-| 13  | `card_create`               | Phase 6 (consent-gated, default: run)       |
-| 14  | `card_update`               | Phase 6 (consent-gated, test card only)     |
-| 15  | `transfer_create`           | Phase 5                                     |
-| 16  | `transfer_update`           | Phase 5                                     |
-| 17  | `dashboard_get_overview`    | Phase 1                                     |
-| 18  | `dashboard_get_asset_chart` | Phase 1                                     |
+| #   | Tool                        | Where exercised                                    |
+| --- | --------------------------- | -------------------------------------------------- |
+| 1   | `init_get_data`             | Phase 0 (first call — baseline context) + 1        |
+| 2   | `transaction_list`          | Phase 0/1, error check, id discovery in Phases 4–5 |
+| 3   | `transaction_create`        | Phase 4                                            |
+| 4   | `transaction_update`        | Phase 4                                            |
+| 5   | `transaction_delete`        | Phase 4 (bulk), Phase 5                            |
+| 6   | `summary_get_period`        | Phase 1                                            |
+| 7   | `summary_export_excel`      | Phase 2 (both `.xls` and `.xlsx`), error check     |
+| 8   | `asset_list`                | Phase 0/1, discovery in Phases 3–5, Phase 7        |
+| 9   | `asset_create`              | Phases 3–4                                         |
+| 10  | `asset_update`              | Phase 3                                            |
+| 11  | `asset_delete`              | Phases 3 and 5                                     |
+| 12  | `card_list`                 | Phase 0 (drives card-test decision), 1, 6          |
+| 13  | `card_create`               | Phase 6 (consent-gated, default: run)              |
+| 14  | `card_update`               | Phase 6 (consent-gated, test card only)            |
+| 15  | `transfer_create`           | Phase 5                                            |
+| 16  | `transfer_update`           | Phase 5                                            |
+| 17  | `dashboard_get_overview`    | Phase 1                                            |
+| 18  | `dashboard_get_asset_chart` | Phase 1                                            |
 
 `card_create`/`card_update` are consent-gated (Phase 6 — ask the user,
 recommended default: proceed). A user-declined skip with reason satisfies
@@ -90,6 +90,22 @@ Record (needed for final verification):
 filter), `summary_get_period`, `asset_list`, `card_list`,
 `dashboard_get_overview`, `dashboard_get_asset_chart` (use a real asset id
 from the baseline).
+
+## Error message check (read-only, instant)
+
+Verify that invalid inputs are rejected with useful messages, through
+normal tool calls. Validation fails before any handler runs, so nothing
+reaches the upstream server and no data is touched:
+
+1. `transaction_list` with a malformed date (e.g. `startDate: "2026-9-1"`,
+   valid `endDate`/`mbid`) must fail with a validation error naming the
+   field and the rule: "Date must be in YYYY-MM-DD format".
+2. `summary_export_excel` with a traversal path (valid dates and `mbid`,
+   `outputPath: "../escape.xls"`) must fail with "outputPath must be a
+   relative path inside the working directory (absolute paths and
+   parent-directory traversal are not allowed)". This rule is a server-side
+   Zod refine that the advertised JSON Schema cannot express, so this case
+   proves the server-side validation itself — not just client-side checks.
 
 ## Phase 2 — Export
 
