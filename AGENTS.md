@@ -6,7 +6,7 @@ Guidance for AI coding agents (Claude, Copilot, ZCode, etc.) working in this rep
 
 Money Manager MCP is a **Model Context Protocol** server that lets AI assistants manage personal finances through the **Realbyte Money Manager** Android app's "PC Manager" web server (a local-network HTTP service).
 
-The server runs over **stdio** and exposes **18 tools** (no resources, no prompts). It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in TypeScript (strict mode, ESM, Node ≥ 18).
+The server runs over **stdio** and exposes **18 tools** (no resources, no prompts). It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in TypeScript (strict mode, ESM, Node ≥ 22).
 
 A phone running the Money Manager app and the computer running the server must be on the **same Wi-Fi network**. There is no automated test suite.
 
@@ -30,7 +30,6 @@ src/
 docs/
 ├── SETUP.md                      # Installation & configuration
 ├── USAGE.md                      # Tool reference with example prompts
-├── CONTRIBUTING.md               # Contributor guide
 └── technical/
     ├── ARCHITECTURE.md           # System design
     └── API_DOCUMENTATION.md      # Upstream Money Manager HTTP API reference
@@ -62,7 +61,10 @@ The server blocks on stdio waiting for an MCP client. There is no HTTP port and 
    TypeScript; errors here block everything.
 4. `npm run lint` and `npm run format`.
 5. Manual verification against a real Money Manager server via an MCP client
-   (there is no test runner).
+   (there is no test runner). For the full end-to-end protocol — every tool,
+   throwaway test data only, guaranteed cleanup and baseline verification —
+   follow the `testing-money-manager-mcp` skill in
+   `.agents/skills/testing-money-manager-mcp/SKILL.md`.
 
 There is no CI config in the repo; the build + lint commands above are the checks.
 

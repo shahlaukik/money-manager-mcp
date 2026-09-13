@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/money-manager-mcp.svg)](https://www.npmjs.com/package/money-manager-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/money-manager-mcp.svg)](https://www.npmjs.com/package/money-manager-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D22.13.0-brightgreen)](https://nodejs.org/)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Compatible-purple)](https://modelcontextprotocol.io/)
 [![Open Source Love](https://badges.frapsoft.com/os/v2/open-source.svg?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
@@ -39,17 +39,17 @@ Then add the server to your AI client.
 
 ```json
 {
-    "servers": {
-        "money-manager": {
-            "type": "stdio",
-            "command": "npx",
-            "args": [
-                "money-manager-mcp@latest",
-                "--baseUrl",
-                "http://YOUR_PHONE_IP:PORT"
-            ]
-        }
+  "servers": {
+    "money-manager": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "money-manager-mcp@latest",
+        "--baseUrl",
+        "http://YOUR_PHONE_IP:PORT"
+      ]
     }
+  }
 }
 ```
 
@@ -59,16 +59,16 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 
 ```json
 {
-    "mcpServers": {
-        "money-manager": {
-            "command": "npx",
-            "args": [
-                "money-manager-mcp@latest",
-                "--baseUrl",
-                "http://YOUR_PHONE_IP:PORT"
-            ]
-        }
+  "mcpServers": {
+    "money-manager": {
+      "command": "npx",
+      "args": [
+        "money-manager-mcp@latest",
+        "--baseUrl",
+        "http://YOUR_PHONE_IP:PORT"
+      ]
     }
+  }
 }
 ```
 
@@ -96,20 +96,12 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 | [Usage Guide](docs/USAGE.md)                         | Tool reference & example prompts |
 | [API Reference](docs/technical/API_DOCUMENTATION.md) | Upstream Money Manager HTTP API  |
 | [Architecture](docs/technical/ARCHITECTURE.md)       | System design                    |
-| [Contributing](docs/CONTRIBUTING.md)                 | Development setup & guidelines   |
+| [Contributing](CONTRIBUTING.md)                      | Development setup & guidelines   |
 | [AGENTS.md](AGENTS.md)                               | Guidance for AI coding agents    |
 
 ## ⚠️ Legal Disclaimer
 
 **Money Manager** is developed by **RealByte**. This MCP server is an independent community project — **not affiliated with, endorsed by, or sponsored by RealByte**. Use is at your own risk and intended for personal/educational use. Users are responsible for compliance with Money Manager's terms of service.
-
-## 📄 License
-
-MIT — see [LICENSE](LICENSE).
-
-## 🤝 Contributing
-
-Contributions are welcome! See the [Contributing Guide](docs/CONTRIBUTING.md).
 
 ## 🙏 Acknowledgments
 

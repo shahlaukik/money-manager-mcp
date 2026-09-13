@@ -25,9 +25,10 @@ The MCP server provides **18 tools** organized into 7 categories:
 Retrieves initial application data including categories, payment types, asset groups, and configuration.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `mbid` | string | No | Money book ID |
+
+| Parameter | Type   | Required | Description   |
+| --------- | ------ | -------- | ------------- |
+| `mbid`    | string | No       | Money book ID |
 
 **Example prompts:**
 
@@ -44,12 +45,13 @@ Retrieves initial application data including categories, payment types, asset gr
 Lists transactions within a date range.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
-| `mbid` | string | Yes | Money book ID |
-| `assetId` | string | No | Filter by asset |
+
+| Parameter   | Type   | Required | Description             |
+| ----------- | ------ | -------- | ----------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD) |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)   |
+| `mbid`      | string | Yes      | Money book ID           |
+| `assetId`   | string | No       | Filter by asset         |
 
 **Example prompts:**
 
@@ -62,20 +64,21 @@ Lists transactions within a date range.
 Creates a new income or expense transaction.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `mbDate` | string | Yes | Transaction date (YYYY-MM-DD) |
-| `assetId` | string | Yes | Asset/Account ID |
-| `payType` | string | Yes | Payment type name |
-| `mcid` | string | Yes | Category ID |
-| `mbCategory` | string | Yes | Category name |
-| `mbCash` | number | Yes | Amount |
-| `inOutCode` | string | Yes | "0" for income, "1" for expense |
-| `inOutType` | string | Yes | Transaction type name |
-| `mcscid` | string | No | Subcategory ID |
-| `subCategory` | string | No | Subcategory name |
-| `mbContent` | string | No | Description |
-| `mbDetailContent` | string | No | Detailed notes |
+
+| Parameter         | Type   | Required | Description                     |
+| ----------------- | ------ | -------- | ------------------------------- |
+| `mbDate`          | string | Yes      | Transaction date (YYYY-MM-DD)   |
+| `assetId`         | string | Yes      | Asset/Account ID                |
+| `payType`         | string | Yes      | Payment type name               |
+| `mcid`            | string | Yes      | Category ID                     |
+| `mbCategory`      | string | Yes      | Category name                   |
+| `mbCash`          | number | Yes      | Amount                          |
+| `inOutCode`       | string | Yes      | "0" for income, "1" for expense |
+| `inOutType`       | string | Yes      | Transaction type name           |
+| `mcscid`          | string | No       | Subcategory ID                  |
+| `subCategory`     | string | No       | Subcategory name                |
+| `mbContent`       | string | No       | Description                     |
+| `mbDetailContent` | string | No       | Detailed notes                  |
 
 **Returns:** `{success, message}` — **does NOT return the new transaction ID** (the upstream API omits it). To obtain the new ID, call `transaction_list` filtered by date and `assetId` immediately after.
 
@@ -90,9 +93,10 @@ Creates a new income or expense transaction.
 Updates an existing transaction.
 
 **Parameters:** Same as `transaction_create`, plus:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | string | Yes | Transaction ID |
+
+| Parameter | Type   | Required | Description    |
+| --------- | ------ | -------- | -------------- |
+| `id`      | string | Yes      | Transaction ID |
 
 **Example prompts:**
 
@@ -104,9 +108,10 @@ Updates an existing transaction.
 Deletes one or more transactions.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ids` | array | Yes | Transaction IDs to delete |
+
+| Parameter | Type  | Required | Description               |
+| --------- | ----- | -------- | ------------------------- |
+| `ids`     | array | Yes      | Transaction IDs to delete |
 
 **Example prompts:**
 
@@ -122,10 +127,11 @@ Deletes one or more transactions.
 Retrieves financial summary statistics for a date range.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
+
+| Parameter   | Type   | Required | Description             |
+| ----------- | ------ | -------- | ----------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD) |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)   |
 
 **Example prompts:**
 
@@ -138,14 +144,15 @@ Retrieves financial summary statistics for a date range.
 Exports transaction data to an Excel file.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
-| `mbid` | string | Yes | Money book ID |
-| `outputPath` | string | Yes | File path (use .xls extension) |
-| `assetId` | string | No | Filter by asset |
-| `inOutType` | string | No | Filter by type |
+
+| Parameter    | Type   | Required | Description                                                                                                              |
+| ------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `startDate`  | string | Yes      | Start date (YYYY-MM-DD)                                                                                                  |
+| `endDate`    | string | Yes      | End date (YYYY-MM-DD)                                                                                                    |
+| `mbid`       | string | Yes      | Money book ID                                                                                                            |
+| `outputPath` | string | Yes      | Relative path inside the server's working directory (use .xls extension; absolute paths and `..` traversal are rejected) |
+| `assetId`    | string | No       | Filter by asset                                                                                                          |
+| `inOutType`  | string | No       | Filter by type                                                                                                           |
 
 **Example prompts:**
 
@@ -173,14 +180,15 @@ Retrieves all assets/accounts with balances.
 Creates a new asset/account.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetGroupId` | string | Yes | Asset group ID |
-| `assetGroupName` | string | Yes | Asset group name |
-| `assetName` | string | Yes | Asset name |
-| `assetMoney` | number | Yes | Initial balance |
-| `linkAssetId` | string | No | Linked asset ID |
-| `linkAssetName` | string | No | Linked asset name |
+
+| Parameter        | Type   | Required | Description       |
+| ---------------- | ------ | -------- | ----------------- |
+| `assetGroupId`   | string | Yes      | Asset group ID    |
+| `assetGroupName` | string | Yes      | Asset group name  |
+| `assetName`      | string | Yes      | Asset name        |
+| `assetMoney`     | number | Yes      | Initial balance   |
+| `linkAssetId`    | string | No       | Linked asset ID   |
+| `linkAssetName`  | string | No       | Linked asset name |
 
 **Returns:** `{success, message}` — **does NOT return the new asset ID** (the upstream API omits it). To obtain the new ID, call `asset_list` immediately after.
 
@@ -194,15 +202,16 @@ Creates a new asset/account.
 Updates an existing asset.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID |
-| `assetGroupId` | string | Yes | Asset group ID |
-| `assetGroupName` | string | Yes | Asset group name |
-| `assetName` | string | Yes | Asset name |
-| `assetMoney` | number | Yes | Current balance |
-| `linkAssetId` | string | No | Linked asset ID |
-| `linkAssetName` | string | No | Linked asset name |
+
+| Parameter        | Type   | Required | Description       |
+| ---------------- | ------ | -------- | ----------------- |
+| `assetId`        | string | Yes      | Asset ID          |
+| `assetGroupId`   | string | Yes      | Asset group ID    |
+| `assetGroupName` | string | Yes      | Asset group name  |
+| `assetName`      | string | Yes      | Asset name        |
+| `assetMoney`     | number | Yes      | Current balance   |
+| `linkAssetId`    | string | No       | Linked asset ID   |
+| `linkAssetName`  | string | No       | Linked asset name |
 
 **Example prompts:**
 
@@ -214,9 +223,10 @@ Updates an existing asset.
 Removes an asset.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID |
+
+| Parameter | Type   | Required | Description |
+| --------- | ------ | -------- | ----------- |
+| `assetId` | string | Yes      | Asset ID    |
 
 **Example prompts:**
 
@@ -242,14 +252,15 @@ Retrieves all credit cards.
 Creates a new credit card.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `cardName` | string | Yes | Card name |
-| `linkAssetId` | string | Yes | Linked payment asset ID |
-| `linkAssetName` | string | Yes | Linked payment asset name |
-| `notPayMoney` | number | Yes | Unpaid balance (negative) |
-| `jungsanDay` | number | No | Balance calculation day (1-31) |
-| `paymentDay` | number | No | Payment due day (1-31) |
+
+| Parameter       | Type   | Required | Description                    |
+| --------------- | ------ | -------- | ------------------------------ |
+| `cardName`      | string | Yes      | Card name                      |
+| `linkAssetId`   | string | Yes      | Linked payment asset ID        |
+| `linkAssetName` | string | Yes      | Linked payment asset name      |
+| `notPayMoney`   | number | Yes      | Unpaid balance (negative)      |
+| `jungsanDay`    | number | No       | Balance calculation day (1-31) |
+| `paymentDay`    | number | No       | Payment due day (1-31)         |
 
 **Returns:** `{success, message}` — **does NOT return the new card ID** (the upstream API omits it). To obtain the new ID, call `card_list` immediately after.
 
@@ -264,14 +275,15 @@ Creates a new credit card.
 Updates a credit card.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Card asset ID |
-| `cardName` | string | Yes | Card name |
-| `linkAssetId` | string | Yes | Linked payment asset ID |
-| `linkAssetName` | string | Yes | Linked payment asset name |
-| `jungsanDay` | number | No | Balance calculation day |
-| `paymentDay` | number | No | Payment due day |
+
+| Parameter       | Type   | Required | Description               |
+| --------------- | ------ | -------- | ------------------------- |
+| `assetId`       | string | Yes      | Card asset ID             |
+| `cardName`      | string | Yes      | Card name                 |
+| `linkAssetId`   | string | Yes      | Linked payment asset ID   |
+| `linkAssetName` | string | Yes      | Linked payment asset name |
+| `jungsanDay`    | number | No       | Balance calculation day   |
+| `paymentDay`    | number | No       | Payment due day           |
 
 ---
 
@@ -282,16 +294,17 @@ Updates a credit card.
 Transfers money between assets.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `moveDate` | string | Yes | Transfer date (YYYY-MM-DD) |
-| `fromAssetId` | string | Yes | Source asset ID |
-| `fromAssetName` | string | Yes | Source asset name |
-| `toAssetId` | string | Yes | Destination asset ID |
-| `toAssetName` | string | Yes | Destination asset name |
-| `moveMoney` | number | Yes | Transfer amount |
-| `moneyContent` | string | No | Description |
-| `mbDetailContent` | string | No | Detailed notes |
+
+| Parameter         | Type   | Required | Description                |
+| ----------------- | ------ | -------- | -------------------------- |
+| `moveDate`        | string | Yes      | Transfer date (YYYY-MM-DD) |
+| `fromAssetId`     | string | Yes      | Source asset ID            |
+| `fromAssetName`   | string | Yes      | Source asset name          |
+| `toAssetId`       | string | Yes      | Destination asset ID       |
+| `toAssetName`     | string | Yes      | Destination asset name     |
+| `moveMoney`       | number | Yes      | Transfer amount            |
+| `moneyContent`    | string | No       | Description                |
+| `mbDetailContent` | string | No       | Detailed notes             |
 
 **Returns:** `{success, message}` — **does NOT return the new transfer ID** (the upstream API omits it). A transfer appears as two rows in `transaction_list`: a `Transfer-Out` (inOutCode `3`, negative amount) on the source asset and a `Transfer-In` (inOutCode `4`, positive amount) on the destination. To find the new transfer's ID, call `transaction_list` filtered by the source asset and date, and read the `Transfer-Out` row's `id`.
 
@@ -305,9 +318,10 @@ Transfers money between assets.
 Modifies an existing transfer.
 
 **Parameters:** Same as `transfer_create`, plus:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | string | Yes | Transfer ID (the `Transfer-Out` row's id) |
+
+| Parameter | Type   | Required | Description                               |
+| --------- | ------ | -------- | ----------------------------------------- |
+| `id`      | string | Yes      | Transfer ID (the `Transfer-Out` row's id) |
 
 > ⚠️ **Does not update in place.** The upstream API creates a **new** transfer with a **new ID** and invalidates the old one. The response includes this warning. After updating, call `transaction_list` (filtered by the source asset and date, look for the `Transfer-Out` row) to get the new ID — the `id` you passed is no longer valid.
 
@@ -332,9 +346,10 @@ Retrieves dashboard overview with trends and breakdown.
 Retrieves historical chart data for a specific asset.
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID |
+
+| Parameter | Type   | Required | Description |
+| --------- | ------ | -------- | ----------- |
+| `assetId` | string | Yes      | Asset ID    |
 
 **Example prompts:**
 

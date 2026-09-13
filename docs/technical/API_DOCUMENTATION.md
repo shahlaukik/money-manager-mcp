@@ -111,9 +111,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves initial application data including categories, payment types, asset groups, and multi-book configuration.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `mbid` | string | No | Money book ID |
+
+| Parameter | Type   | Required | Description   |
+| --------- | ------ | -------- | ------------- |
+| `mbid`    | string | No       | Money book ID |
 
 **Response Format:** JSON
 
@@ -176,12 +177,13 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves transaction records for a specified date range.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
-| `mbid` | string | Yes | Money book ID |
-| `assetId` | string | No | Filter by specific asset ID |
+
+| Parameter   | Type   | Required | Description                 |
+| ----------- | ------ | -------- | --------------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD)     |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)       |
+| `mbid`      | string | Yes      | Money book ID               |
+| `assetId`   | string | No       | Filter by specific asset ID |
 
 **Response Format:** XML
 
@@ -227,22 +229,23 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Creates a new transaction record.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `mbDate` | date | Yes | Transaction date (YYYY-MM-DD) |
-| `assetId` | string | Yes | Asset/Account ID |
-| `toAssetId` | string | No | Target asset ID (for transfers) |
-| `targetAssetId` | string | No | Target asset ID |
-| `payType` | string | Yes | Payment type name |
-| `mcid` | string | Yes | Category ID |
-| `mbCategory` | string | Yes | Category name |
-| `mcscid` | string | No | Subcategory ID |
-| `subCategory` | string | No | Subcategory name |
-| `mbContent` | string | No | Transaction description |
-| `mbCash` | float | Yes | Amount |
-| `inOutCode` | string | Yes | Transaction type code |
-| `inOutType` | string | Yes | Transaction type name |
-| `mbDetailContent` | string | No | Detailed notes |
+
+| Parameter         | Type   | Required | Description                     |
+| ----------------- | ------ | -------- | ------------------------------- |
+| `mbDate`          | date   | Yes      | Transaction date (YYYY-MM-DD)   |
+| `assetId`         | string | Yes      | Asset/Account ID                |
+| `toAssetId`       | string | No       | Target asset ID (for transfers) |
+| `targetAssetId`   | string | No       | Target asset ID                 |
+| `payType`         | string | Yes      | Payment type name               |
+| `mcid`            | string | Yes      | Category ID                     |
+| `mbCategory`      | string | Yes      | Category name                   |
+| `mcscid`          | string | No       | Subcategory ID                  |
+| `subCategory`     | string | No       | Subcategory name                |
+| `mbContent`       | string | No       | Transaction description         |
+| `mbCash`          | float  | Yes      | Amount                          |
+| `inOutCode`       | string | Yes      | Transaction type code           |
+| `inOutType`       | string | Yes      | Transaction type name           |
+| `mbDetailContent` | string | No       | Detailed notes                  |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -255,9 +258,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Updates an existing transaction record.
 
 **Request Parameters:** Same as Create Transaction, plus:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | string | Yes | Transaction ID |
+
+| Parameter | Type   | Required | Description    |
+| --------- | ------ | -------- | -------------- |
+| `id`      | string | Yes      | Transaction ID |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -270,9 +274,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Deletes one or more transactions.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ids` | string | Yes | Colon-separated list of transaction IDs (e.g., ":id1:id2:id3") |
+
+| Parameter | Type   | Required | Description                                                    |
+| --------- | ------ | -------- | -------------------------------------------------------------- |
+| `ids`     | string | Yes      | Colon-separated list of transaction IDs (e.g., ":id1:id2:id3") |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -285,10 +290,11 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves financial summary statistics for a date range.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
+
+| Parameter   | Type   | Required | Description             |
+| ----------- | ------ | -------- | ----------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD) |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)   |
 
 **Response Format:** JSON
 
@@ -330,13 +336,14 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Exports transaction data to Excel file format.
 
 **Request Parameters:** (Form submission)
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
-| `mbid` | string | Yes | Money book ID |
-| `assetId` | string | No | Filter by asset ID |
-| `inOutType` | string | No | Filter by income/expense type |
+
+| Parameter   | Type   | Required | Description                   |
+| ----------- | ------ | -------- | ----------------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD)       |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)         |
+| `mbid`      | string | Yes      | Money book ID                 |
+| `assetId`   | string | No       | Filter by asset ID            |
+| `inOutType` | string | No       | Filter by income/expense type |
 
 **Response Format:** Excel file download (HTML-based .xls format)
 
@@ -417,14 +424,15 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Creates a new asset/account.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetGroupId` | string | Yes | Asset group ID |
-| `assetGroupName` | string | Yes | Asset group name |
-| `assetName` | string | Yes | Asset name |
-| `assetMoney` | number | Yes | Initial balance |
-| `linkAssetId` | string | No | Linked asset ID (for certain asset types) |
-| `linkAssetName` | string | No | Linked asset name |
+
+| Parameter        | Type   | Required | Description                               |
+| ---------------- | ------ | -------- | ----------------------------------------- |
+| `assetGroupId`   | string | Yes      | Asset group ID                            |
+| `assetGroupName` | string | Yes      | Asset group name                          |
+| `assetName`      | string | Yes      | Asset name                                |
+| `assetMoney`     | number | Yes      | Initial balance                           |
+| `linkAssetId`    | string | No       | Linked asset ID (for certain asset types) |
+| `linkAssetName`  | string | No       | Linked asset name                         |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -437,15 +445,16 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Modifies an existing asset/account.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID |
-| `assetGroupId` | string | Yes | Asset group ID |
-| `assetGroupName` | string | Yes | Asset group name |
-| `assetName` | string | Yes | Asset name |
-| `assetMoney` | number | Yes | Current balance |
-| `linkAssetId` | string | No | Linked asset ID |
-| `linkAssetName` | string | No | Linked asset name |
+
+| Parameter        | Type   | Required | Description       |
+| ---------------- | ------ | -------- | ----------------- |
+| `assetId`        | string | Yes      | Asset ID          |
+| `assetGroupId`   | string | Yes      | Asset group ID    |
+| `assetGroupName` | string | Yes      | Asset group name  |
+| `assetName`      | string | Yes      | Asset name        |
+| `assetMoney`     | number | Yes      | Current balance   |
+| `linkAssetId`    | string | No       | Linked asset ID   |
+| `linkAssetName`  | string | No       | Linked asset name |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -458,9 +467,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Removes an asset/account.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID to remove |
+
+| Parameter | Type   | Required | Description        |
+| --------- | ------ | -------- | ------------------ |
+| `assetId` | string | Yes      | Asset ID to remove |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -473,14 +483,15 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Creates a new credit card.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `cardName` | string | Yes | Credit card name |
-| `linkAssetId` | string | Yes | Linked payment asset ID |
-| `linkAssetName` | string | Yes | Linked payment asset name |
-| `notPayMoney` | number | Yes | Unpaid balance (negative value) |
-| `jungsanDay` | number | No | Balance calculation day (1-31) |
-| `paymentDay` | number | No | Payment due day (1-31) |
+
+| Parameter       | Type   | Required | Description                     |
+| --------------- | ------ | -------- | ------------------------------- |
+| `cardName`      | string | Yes      | Credit card name                |
+| `linkAssetId`   | string | Yes      | Linked payment asset ID         |
+| `linkAssetName` | string | Yes      | Linked payment asset name       |
+| `notPayMoney`   | number | Yes      | Unpaid balance (negative value) |
+| `jungsanDay`    | number | No       | Balance calculation day (1-31)  |
+| `paymentDay`    | number | No       | Payment due day (1-31)          |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -493,14 +504,15 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Modifies an existing credit card.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Card asset ID |
-| `cardName` | string | Yes | Credit card name |
-| `linkAssetId` | string | Yes | Linked payment asset ID |
-| `linkAssetName` | string | Yes | Linked payment asset name |
-| `jungsanDay` | number | No | Balance calculation day (1-31) |
-| `paymentDay` | number | No | Payment due day (1-31) |
+
+| Parameter       | Type   | Required | Description                    |
+| --------------- | ------ | -------- | ------------------------------ |
+| `assetId`       | string | Yes      | Card asset ID                  |
+| `cardName`      | string | Yes      | Credit card name               |
+| `linkAssetId`   | string | Yes      | Linked payment asset ID        |
+| `linkAssetName` | string | Yes      | Linked payment asset name      |
+| `jungsanDay`    | number | No       | Balance calculation day (1-31) |
+| `paymentDay`    | number | No       | Payment due day (1-31)         |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -513,16 +525,17 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Transfers money between two assets.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `moveDate` | date | Yes | Transfer date (YYYY-MM-DD) |
-| `fromAssetId` | string | Yes | Source asset ID |
-| `fromAssetName` | string | Yes | Source asset name |
-| `toAssetId` | string | Yes | Destination asset ID |
-| `toAssetName` | string | Yes | Destination asset name |
-| `moveMoney` | number | Yes | Transfer amount |
-| `moneyContent` | string | No | Transfer description |
-| `mbDetailContent` | string | No | Detailed notes |
+
+| Parameter         | Type   | Required | Description                |
+| ----------------- | ------ | -------- | -------------------------- |
+| `moveDate`        | date   | Yes      | Transfer date (YYYY-MM-DD) |
+| `fromAssetId`     | string | Yes      | Source asset ID            |
+| `fromAssetName`   | string | Yes      | Source asset name          |
+| `toAssetId`       | string | Yes      | Destination asset ID       |
+| `toAssetName`     | string | Yes      | Destination asset name     |
+| `moveMoney`       | number | Yes      | Transfer amount            |
+| `moneyContent`    | string | No       | Transfer description       |
+| `mbDetailContent` | string | No       | Detailed notes             |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -535,9 +548,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Modifies an existing asset transfer.
 
 **Request Parameters:** Same as Transfer Between Assets, plus:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | string | Yes | Transfer transaction ID |
+
+| Parameter | Type   | Required | Description             |
+| --------- | ------ | -------- | ----------------------- |
+| `id`      | string | Yes      | Transfer transaction ID |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -590,9 +604,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves historical chart data for a specific asset.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID |
+
+| Parameter | Type   | Required | Description |
+| --------- | ------ | -------- | ----------- |
+| `assetId` | string | Yes      | Asset ID    |
 
 **Response Format:** JSON
 
@@ -616,9 +631,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Uploads a SQLite database file for data restoration.
 
 **Request Parameters:** (Multipart form data)
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `file` | file | Yes | SQLite database file (money.sqlite) |
+
+| Parameter | Type | Required | Description                         |
+| --------- | ---- | -------- | ----------------------------------- |
+| `file`    | file | Yes      | SQLite database file (money.sqlite) |
 
 **Response Format:** JSON (success/failure indicator)
 

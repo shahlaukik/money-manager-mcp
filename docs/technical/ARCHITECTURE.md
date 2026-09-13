@@ -20,15 +20,15 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 ### Core Dependencies
 
-| Package                     | Purpose                                            |
-| --------------------------- | -------------------------------------------------- |
-| `fastmcp`                   | MCP server framework (transport, dispatch, schema) |
-| `axios`                     | HTTP client for API calls                          |
-| `zod`                       | Input schema validation (also drives tool schemas) |
-| `dotenv`                    | Environment variable management                    |
-| `xml2js`                    | XML response parsing (for transaction list)        |
-| `tough-cookie`              | Cookie/session management                          |
-| `axios-cookiejar-support`   | Cookie jar integration with axios                  |
+| Package                   | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| `fastmcp`                 | MCP server framework (transport, dispatch, schema) |
+| `axios`                   | HTTP client for API calls                          |
+| `zod`                     | Input schema validation (also drives tool schemas) |
+| `dotenv`                  | Environment variable management                    |
+| `xml2js`                  | XML response parsing (for transaction list)        |
+| `tough-cookie`            | Cookie/session management                          |
+| `axios-cookiejar-support` | Cookie jar integration with axios                  |
 
 ### Development Dependencies
 
@@ -63,11 +63,11 @@ money-manager-mcp/
 │   │   ├── API_DOCUMENTATION.md
 │   │   └── ARCHITECTURE.md
 │   ├── SETUP.md
-│   ├── USAGE.md
-│   └── CONTRIBUTING.md
+│   └── USAGE.md
 ├── dist/                     # Compiled JavaScript output
 ├── .env.example              # Example environment variables
 ├── .gitignore
+├── CONTRIBUTING.md
 ├── LICENSE
 ├── package.json
 ├── tsconfig.json

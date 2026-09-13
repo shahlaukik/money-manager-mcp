@@ -46,9 +46,9 @@ Please be respectful and constructive in all interactions. We're building this p
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
+- Node.js >= 22.13.0
 - Git
-- A running Money Manager web server on your phone (for integration testing) — see [SETUP.md](./SETUP.md)
+- A running Money Manager web server on your phone (for integration testing) — see [SETUP.md](docs/SETUP.md)
 
 ### Getting Started
 

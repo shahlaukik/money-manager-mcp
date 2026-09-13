@@ -4,7 +4,7 @@ This guide covers installation and configuration of the Money Manager MCP server
 
 ## Prerequisites
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 22.13.0
 - **npm** >= 9.0.0
 - **Realbyte Money Manager** app with web server enabled
 - Your phone and computer on the **same Wi-Fi network**
@@ -345,7 +345,7 @@ The Money Manager app runs on your local network. Common ways to find it:
 
 #### Build errors
 
-- Ensure Node.js >= 18 is installed: `node --version`
+- Ensure Node.js >= 22.13 is installed: `node --version`
 - Run `npm install` to ensure all dependencies are present
 - Check for TypeScript errors: `npm run build`
 
@@ -371,4 +371,4 @@ Or in your environment configuration:
 ## Next Steps
 
 - See [USAGE.md](./USAGE.md) for tool descriptions and examples
-- See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup
+- See [CONTRIBUTING.md](../CONTRIBUTING.md) for development setup
