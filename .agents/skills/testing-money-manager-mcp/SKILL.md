@@ -106,6 +106,10 @@ reaches the upstream server and no data is touched:
    parent-directory traversal are not allowed)". This rule is a server-side
    Zod refine that the advertised JSON Schema cannot express, so this case
    proves the server-side validation itself — not just client-side checks.
+3. `summary_export_excel` with a non-export extension (valid dates and
+   `mbid`, `outputPath: "export.txt"`) must fail with "outputPath must end
+   in .xls or .xlsx (other extensions are not allowed)" — another
+   server-side Zod refine in the same family as the traversal rule.
 
 ## Phase 2 — Export
 

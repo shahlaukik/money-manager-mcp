@@ -356,10 +356,15 @@ The Money Manager app runs on your local network. Common ways to find it:
 - Try restarting the MCP server
 - Check `MONEY_MANAGER_SESSION_PERSIST` is set to `true`
 
+#### "outputPath must end in .xls or .xlsx (other extensions are not allowed)"
+
+- Excel exports must use a `.xls` or `.xlsx` extension, so the export cannot overwrite unrelated files inside the working directory
+- `.xlsx` paths are auto-corrected to `.xls` (the server returns an HTML-based Excel format)
+
 #### "outputPath must be a relative path inside the working directory"
 
 - Excel exports can only be written inside the server's working directory
-- Use a relative path (e.g. `exports/november.xls`) — absolute paths and `..` traversal are rejected
+- Use a relative `.xls`/`.xlsx` path (e.g. `exports/november.xls`) — absolute paths, `..` traversal, and symlinks pointing outside are rejected
 
 #### "Tool not found" in AI client
 

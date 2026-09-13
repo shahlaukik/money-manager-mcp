@@ -153,14 +153,14 @@ Exports transaction data to an Excel file.
 
 **Parameters:**
 
-| Parameter    | Type   | Required | Description                                                                                                              |
-| ------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `startDate`  | string | Yes      | Start date (YYYY-MM-DD)                                                                                                  |
-| `endDate`    | string | Yes      | End date (YYYY-MM-DD)                                                                                                    |
-| `mbid`       | string | Yes      | Money book ID                                                                                                            |
+| Parameter    | Type   | Required | Description                                                                                                                                                                                            |
+| ------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `startDate`  | string | Yes      | Start date (YYYY-MM-DD)                                                                                                                                                                                |
+| `endDate`    | string | Yes      | End date (YYYY-MM-DD)                                                                                                                                                                                  |
+| `mbid`       | string | Yes      | Money book ID                                                                                                                                                                                          |
 | `outputPath` | string | Yes      | Relative `.xls`/`.xlsx` path inside the server's working directory (other extensions, absolute paths, `..` traversal, and symlinks pointing outside are rejected; `.xlsx` is auto-corrected to `.xls`) |
-| `assetId`    | string | No       | Filter by asset                                                                                                          |
-| `inOutType`  | string | No       | Filter by type                                                                                                           |
+| `assetId`    | string | No       | Filter by asset                                                                                                                                                                                        |
+| `inOutType`  | string | No       | Filter by type                                                                                                                                                                                         |
 
 **Example prompts:**
 
@@ -472,6 +472,7 @@ These are inherent to the upstream Money Manager HTTP API, not the MCP server. T
 
 **"Export failed"**
 
-- Use `.xls` extension (not `.xlsx`)
+- Use a `.xls` or `.xlsx` extension — other extensions are rejected (`.xlsx` is auto-corrected to `.xls`)
+- Use a relative path inside the server's working directory — absolute paths and `..` traversal are rejected
 - Ensure the output path is writable
 - Check available disk space
