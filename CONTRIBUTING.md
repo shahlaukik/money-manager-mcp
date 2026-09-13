@@ -87,26 +87,29 @@ npm run dev -- --baseUrl http://YOUR_PHONE_IP:PORT
 
 - Use TypeScript strict mode
 - Define explicit types (avoid `any`)
-- Use interfaces for object shapes
-- Prefer `const` over `let`
+- **Input types come from Zod.** Define the input schema and infer the type — don't hand-write a parallel interface:
 
 ```typescript
-// Good
+// Good — the schema is the single source of truth
+export const TransactionCreateInputSchema = z.object({
+  mbDate: DateSchema,
+  mbCash: PositiveNumber,
+  inOutCode: InOutCodeSchema,
+  // ...
+});
+export type TransactionCreateInput = z.infer<
+  typeof TransactionCreateInputSchema
+>;
+
+// Avoid — a hand-written input type that can drift from the schema
 interface TransactionInput {
   mbDate: string;
   mbCash: number;
-  assetId: string;
 }
-
-const createTransaction = async (input: TransactionInput): Promise<void> => {
-  // ...
-};
-
-// Avoid
-const createTransaction = async (input: any) => {
-  // ...
-};
 ```
+
+- Prefer `const` over `let`
+- Use `.js` extensions in relative imports (required by `NodeNext` module resolution)
 
 ### Naming Conventions
 
@@ -122,15 +125,17 @@ const createTransaction = async (input: any) => {
 
 - Use custom error classes from `src/errors` (`NetworkError`, `APIError`, `SessionError`, `FileError`)
 - Throw them from handlers — FastMCP catches them and surfaces them to the client as `isError` results
-- Always include error context
+- **The message is the only client-facing payload** — anything the client should see (guidance, the original cause) must be part of it
+- The `retryable` flag drives the HTTP client's retry decisions internally
 
 ```typescript
-import { APIError } from "../errors";
+import { APIError } from "../errors/index.js";
 
 try {
   await client.post("/endpoint", data);
 } catch (error) {
-  throw new APIError("Failed to create transaction");
+  // Surface the cause in the message — it's all the client ever sees.
+  throw new APIError(`Failed to create transaction: ${String(error)}`);
 }
 ```
 
@@ -142,15 +147,17 @@ try {
 
 ```typescript
 /**
- * Creates a new transaction in Money Manager.
+ * Exports transactions to an Excel file.
  *
- * @param input - Transaction details
- * @returns The created transaction ID
- * @throws {APIError} If the API call fails
+ * NOTE: the API returns an HTML file with Excel metadata, not a real XLSX
+ * binary, so `.xlsx` paths are auto-corrected to `.xls`.
+ *
+ * @throws {FileError} If the file cannot be written
  */
-export async function createTransaction(
-  input: TransactionInput,
-): Promise<string> {
+export async function handleSummaryExportExcel(
+  client: HttpClient,
+  args: SummaryExportExcelInput,
+): Promise<{ success: boolean; filePath: string; fileSize: number }> {
   // ...
 }
 ```
@@ -231,6 +238,12 @@ There is no automated test suite today. Until one exists, changes are verified b
 3. **Manual testing** against a live Money Manager server through an MCP client
    (Claude Desktop, VS Code with Copilot, etc.).
 
+For changes to tools, schemas, the HTTP client, or config, run the full live
+end-to-end protocol: every tool exercised with throwaway data, guaranteed
+cleanup, and baseline verification. It is documented as the
+`testing-money-manager-mcp` skill in
+[`.agents/skills/testing-money-manager-mcp/SKILL.md`](.agents/skills/testing-money-manager-mcp/SKILL.md).
+
 Handlers are pure `(client, args) → object` functions, so they are straightforward to unit-test against a mocked `HttpClient` if you choose to add tests for your change.
 
 ## Pull Request Process
@@ -287,11 +300,12 @@ How was this tested?
 
 ### Reporting Security Issues
 
-Do NOT open public issues for security vulnerabilities. Instead:
+Do NOT open public issues for security vulnerabilities. Instead, use GitHub's
+**private vulnerability reporting** (repository **Security** tab →
+**Report a vulnerability**):
 
-1. Email the maintainers directly
-2. Provide detailed description
-3. Allow time for a fix before disclosure
+1. Provide a detailed description
+2. Allow time for a fix before disclosure
 
 ## License
 

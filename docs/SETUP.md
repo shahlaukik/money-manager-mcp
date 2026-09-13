@@ -64,7 +64,8 @@ MONEY_MANAGER_BASE_URL=http://your-server-ip:port
 # Optional: Request timeout in milliseconds (default: 30000)
 MONEY_MANAGER_TIMEOUT=30000
 
-# Optional: Maximum retry attempts for failed requests (default: 3)
+# Optional: Maximum retry attempts for failed read requests (default: 3).
+# Writes are never retried, so a timed-out write cannot be applied twice.
 MONEY_MANAGER_RETRY_COUNT=3
 
 # Optional: Log level (debug|info|warn|error) (default: info)
@@ -85,23 +86,41 @@ The server reads configuration in this order (highest priority first):
 
 ### Configuration File (Alternative)
 
-You can also use a `.money-manager-mcp.json` file in your working directory:
+You can also use a `.money-manager-mcp.json` file in your working directory. Any subset of keys can be provided — unspecified keys fall back to the defaults shown below:
 
 ```json
 {
   "server": {
     "baseUrl": "http://your-server-ip:port",
     "timeout": 30000,
-    "retryCount": 3
+    "retryCount": 3,
+    "retryDelay": 1000
   },
   "logging": {
-    "level": "info"
+    "level": "info",
+    "format": "json"
   },
   "session": {
-    "persist": true
+    "persist": true,
+    "cookieFile": ".session-cookies.json"
   }
 }
 ```
+
+| Key                  | Default                 | Description                                                              |
+| -------------------- | ----------------------- | ------------------------------------------------------------------------ |
+| `server.baseUrl`     | — (required)            | Money Manager server address (`http://` or `https://`)                   |
+| `server.timeout`     | `30000`                 | Request timeout in milliseconds (1000–120000)                            |
+| `server.retryCount`  | `3`                     | Retry attempts for failed read requests (0–10); writes are never retried |
+| `server.retryDelay`  | `1000`                  | Base delay in milliseconds for the exponential-backoff retry             |
+| `logging.level`      | `info`                  | `debug` \| `info` \| `warn` \| `error`                                   |
+| `logging.format`     | `json`                  | Log line format written to stderr: `json` or `text`                      |
+| `session.persist`    | `true`                  | Persist session cookies across restarts                                  |
+| `session.cookieFile` | `.session-cookies.json` | Cookie file path, relative to the working directory                      |
+
+> `retryDelay`, `logging.format`, and `session.cookieFile` can only be set through the config file (there are no environment variables for them).
+
+When session persistence is enabled, the server saves its session cookies to the configured cookie file in the working directory so it can reuse the login across restarts. The file is gitignored and created only after the first successful request.
 
 ## MCP Client Setup
 
@@ -336,6 +355,11 @@ The Money Manager app runs on your local network. Common ways to find it:
 - The server auto-manages sessions
 - Try restarting the MCP server
 - Check `MONEY_MANAGER_SESSION_PERSIST` is set to `true`
+
+#### "outputPath must be a relative path inside the working directory"
+
+- Excel exports can only be written inside the server's working directory
+- Use a relative path (e.g. `exports/november.xls`) — absolute paths and `..` traversal are rejected
 
 #### "Tool not found" in AI client
 

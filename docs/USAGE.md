@@ -53,6 +53,8 @@ Lists transactions within a date range.
 | `mbid`      | string | Yes      | Money book ID           |
 | `assetId`   | string | No       | Filter by asset         |
 
+**Returns:** `{ count, transactions }`
+
 **Example prompts:**
 
 - "Show my transactions from November 2025"
@@ -98,6 +100,8 @@ Updates an existing transaction.
 | --------- | ------ | -------- | -------------- |
 | `id`      | string | Yes      | Transaction ID |
 
+> On updates, `inOutCode` accepts the full `0`–`8` range (income, expense, transfers, card payments), so records of any type can be edited. `transaction_create` is limited to `0` (income) and `1` (expense).
+
 **Example prompts:**
 
 - "Change the amount on transaction XYZ to $75"
@@ -112,6 +116,8 @@ Deletes one or more transactions.
 | Parameter | Type  | Required | Description               |
 | --------- | ----- | -------- | ------------------------- |
 | `ids`     | array | Yes      | Transaction IDs to delete |
+
+**Returns:** `{ success, deletedCount, message }`
 
 **Example prompts:**
 
@@ -132,6 +138,8 @@ Retrieves financial summary statistics for a date range.
 | ----------- | ------ | -------- | ----------------------- |
 | `startDate` | string | Yes      | Start date (YYYY-MM-DD) |
 | `endDate`   | string | Yes      | End date (YYYY-MM-DD)   |
+
+**Returns:** `{ summary, incomeByCategory, expenseByCategory }`
 
 **Example prompts:**
 
@@ -168,6 +176,8 @@ Exports transaction data to an Excel file.
 Retrieves all assets/accounts with balances.
 
 **Parameters:** None
+
+**Returns:** `{ assetGroups, totalBalance }` — the groups form a tree; `totalBalance` sums all individual assets.
 
 **Example prompts:**
 
@@ -242,6 +252,8 @@ Retrieves all credit cards.
 
 **Parameters:** None
 
+**Returns:** `{ cardGroups, totalUnpaid }`
+
 **Example prompts:**
 
 - "Show my credit cards"
@@ -285,6 +297,11 @@ Updates a credit card.
 | `jungsanDay`    | number | No       | Balance calculation day   |
 | `paymentDay`    | number | No       | Payment due day           |
 
+**Example prompts:**
+
+- "Rename my Visa card to 'Travel card'"
+- "Change my credit card's payment due day to the 25th"
+
 ---
 
 ## Transfers
@@ -325,6 +342,10 @@ Modifies an existing transfer.
 
 > ⚠️ **Does not update in place.** The upstream API creates a **new** transfer with a **new ID** and invalidates the old one. The response includes this warning. After updating, call `transaction_list` (filtered by the source asset and date, look for the `Transfer-Out` row) to get the new ID — the `id` you passed is no longer valid.
 
+**Example prompts:**
+
+- "Change last Friday's $500 transfer from savings to checking to $750"
+
 ---
 
 ## Dashboard
@@ -334,6 +355,8 @@ Modifies an existing transfer.
 Retrieves dashboard overview with trends and breakdown.
 
 **Parameters:** None
+
+**Returns:** `{ assetSummary, monthlyTrend, assetRatio, debtRatio }`
 
 **Example prompts:**
 
@@ -350,6 +373,8 @@ Retrieves historical chart data for a specific asset.
 | Parameter | Type   | Required | Description |
 | --------- | ------ | -------- | ----------- |
 | `assetId` | string | Yes      | Asset ID    |
+
+**Returns:** `{ assetId, chartData }` — monthly balance history.
 
 **Example prompts:**
 

@@ -6,6 +6,8 @@ This document describes the API endpoints used by the Money Manager MCP server t
 
 The application uses **ExtJS** framework with **Ext.Ajax.request** for AJAX calls. The base URI for all API endpoints is `/moneyBook`.
 
+> **Response formats:** most endpoints respond in **JavaScript object-literal syntax** (single quotes, unquoted keys), not strict JSON. Examples below are shown as JSON for readability; the MCP server's HTTP client normalizes the literal syntax before handlers see the data. Transaction lists respond in **XML**.
+
 ---
 
 ## API Discovery Methodology
@@ -258,7 +260,7 @@ everywhere.
 | `inOutType`       | string | Yes      | Transaction type name           |
 | `mbDetailContent` | string | No       | Detailed notes                  |
 
-**Response Format:** JSON (success/failure indicator)
+**Response Format:** JSON (success/failure indicator; does **not** include the created transaction's ID — discover it via the transaction list)
 
 ---
 
@@ -445,7 +447,7 @@ everywhere.
 | `linkAssetId`    | string | No       | Linked asset ID (for certain asset types) |
 | `linkAssetName`  | string | No       | Linked asset name                         |
 
-**Response Format:** JSON (success/failure indicator)
+**Response Format:** JSON (success/failure indicator; does **not** include the new asset's ID — discover it via the asset list)
 
 ---
 
@@ -504,7 +506,7 @@ everywhere.
 | `jungsanDay`    | number | No       | Balance calculation day (1-31)  |
 | `paymentDay`    | number | No       | Payment due day (1-31)          |
 
-**Response Format:** JSON (success/failure indicator)
+**Response Format:** JSON (success/failure indicator; does **not** include the new card's ID — discover it via the card list)
 
 ---
 
@@ -548,7 +550,7 @@ everywhere.
 | `moneyContent`    | string | No       | Transfer description       |
 | `mbDetailContent` | string | No       | Detailed notes             |
 
-**Response Format:** JSON (success/failure indicator)
+**Response Format:** JSON (success/failure indicator; does **not** include the new transfer's ID — discover it via the transaction list, looking for the Transfer-Out row on the source asset)
 
 ---
 
@@ -557,6 +559,8 @@ everywhere.
 **Endpoint:** `POST /moneyBook/modifyMoveAsset`
 
 **Description:** Modifies an existing asset transfer.
+
+> ⚠️ Does **not** update in place: the server creates a **new** transfer with a **new** ID and the old ID becomes invalid. Verify the new ID via the transaction list afterward.
 
 **Request Parameters:** Same as Transfer Between Assets, plus:
 
@@ -731,7 +735,7 @@ The API uses standard HTTP status codes:
 
 ## Notes
 
-1. **Date Format:** All dates use the format `YYYY-MM-DD`
+1. **Date Format:** All dates use the format `YYYY-MM-DD`. Time components are silently dropped — the app records the transaction at 12:00 AM
 2. **Number Format:** Currency values are typically formatted with two decimal places
 3. **Session Management:** Session cookies are automatically managed by the HTTP client
-4. **Response Parsing:** Some endpoints return XML (transaction list), while others return JSON
+4. **Response Parsing:** The transaction list returns XML; every other endpoint returns JavaScript object-literal syntax (not strict JSON), which the MCP server's HTTP client normalizes

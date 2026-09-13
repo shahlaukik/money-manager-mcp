@@ -32,11 +32,13 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 ### Development Dependencies
 
-| Package       | Purpose                  |
-| ------------- | ------------------------ |
-| `typescript`  | TypeScript compiler      |
-| `@types/node` | Node.js type definitions |
-| `tsx`         | TypeScript execution     |
+| Package       | Purpose                                            |
+| ------------- | -------------------------------------------------- |
+| `typescript`  | TypeScript compiler                                |
+| `@types/node` | Node.js type definitions                           |
+| `tsx`         | TypeScript execution (dev mode)                    |
+| `eslint`      | Linter (with `typescript-eslint` type-aware rules) |
+| `prettier`    | Code formatter                                     |
 
 ---
 
@@ -66,9 +68,12 @@ money-manager-mcp/
 │   ├── SETUP.md
 │   └── USAGE.md
 ├── dist/                     # Compiled JavaScript output
+├── .agents/skills/           # Repo-local agent skills (live end-to-end test protocol)
 ├── .env.example              # Example environment variables
 ├── .gitignore
+├── AGENTS.md                 # Guidance for AI coding agents
 ├── CONTRIBUTING.md
+├── eslint.config.mjs
 ├── LICENSE
 ├── package.json
 ├── tsconfig.json
@@ -126,6 +131,8 @@ Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the `TOO
 
 `src/index.ts` is a thin bootstrap: it creates the `FastMCP` server, binds the HTTP client to each handler via closure, wraps each handler's domain-object result as JSON text content, and starts the stdio transport. There is no hand-maintained JSON Schema list and no double validation.
 
+The server also sends an `instructions` block in the MCP initialize handshake. Because end users install via `npx money-manager-mcp@latest` and never see this repository's docs, those instructions carry the critical usage contract: call `init_get_data` first (IDs are not guessable), create tools do not return new IDs, `transfer_update` does not update in place, there is no `card_delete`, and `transaction_list` can hang on empty date ranges.
+
 ---
 
 ## 4. Key Implementation Details
@@ -135,10 +142,11 @@ Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the `TOO
 The HTTP client (`src/client/http-client.ts`) handles:
 
 - **Session Management**: Maintains cookies across requests using `tough-cookie`
-- **Cookie Persistence**: Optionally saves/loads session cookies to `.session-cookies.json`
-- **Retry Logic**: Configurable retry attempts for failed requests
+- **Cookie Persistence**: Optionally saves/loads session cookies to `.session-cookies.json` (written with owner-only permissions; unchanged state is never rewritten)
+- **Retry Logic**: Configurable, exponential-backoff retry for failed **read** requests only — a timed-out write may already have been applied upstream, so POSTs run single-shot to avoid duplicating a financial write
 - **Timeout Handling**: Configurable request timeouts
-- **Response Parsing**: Handles both JSON and XML responses
+- **Response Size Cap**: Responses over 25 MiB are rejected (legitimate responses are far smaller)
+- **Response Parsing**: Handles JavaScript object literals and XML responses
 
 ### 4.2 JavaScript Literal Parsing
 
@@ -225,6 +233,8 @@ Configuration is defined by a single Zod schema (`src/config/index.ts`), which i
 
 \* Either `--baseUrl` or `MONEY_MANAGER_BASE_URL` must be provided.
 
+A few settings have no environment variable and can only be set through the config file: `server.retryDelay` (base delay for the exponential-backoff retry, default 1000 ms), `logging.format` (`json` or `text`, default `json`), and `session.cookieFile` (default `.session-cookies.json`). The full key reference is in [SETUP.md](../SETUP.md).
+
 ### Configuration Priority
 
 Highest priority first:
@@ -247,8 +257,10 @@ Highest priority first:
 ### Implemented Security Measures
 
 1. **No Credential Storage**: API uses session cookies only
-2. **Cookie Persistence**: Session cookies stored locally (excluded from git)
+2. **Cookie Persistence**: Session cookies stored locally with owner-only file permissions (excluded from git)
 3. **Input Validation**: All tool inputs validated with Zod schemas
+4. **Export Confinement**: `summary_export_excel`'s `outputPath` must resolve inside the server's working directory — absolute paths, `..` traversal, and symlinks pointing outside it are rejected during input validation
+5. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
 
 ### Files Excluded from Repository
 
@@ -336,9 +348,11 @@ interface Category {
 
 There is no automated test suite. The server is verified by:
 
-1. `npm run build` — TypeScript strict compilation
+1. `npm run build` — TypeScript strict compilation (the primary gate)
 2. `npm run lint` — ESLint
 3. Manual testing with an MCP-compatible client (Claude Desktop, VS Code)
+
+For a full live end-to-end protocol — all 18 tools exercised with throwaway data and guaranteed cleanup — follow the `testing-money-manager-mcp` skill in `.agents/skills/testing-money-manager-mcp/SKILL.md`.
 
 Handlers are pure `(client, args) → object` functions, so they can be unit-tested against a mocked `HttpClient` without a live server, but no such tests are included.
 

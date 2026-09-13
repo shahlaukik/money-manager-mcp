@@ -22,11 +22,15 @@ Each of the **18 tools** is defined once (a Zod schema + handler); the [FastMCP]
 - **Dashboard** — net-worth trends and portfolio breakdown
 - **Session persistence** — stays logged in across restarts
 
+## 📦 Prerequisites
+
+- **Node.js** ≥ 22.13
+- The **Money Manager app** (Android) with its PC Manager web server running on the **same Wi-Fi network** as your computer. To start it: open the app → **More (⋮) → PC Manager → Start**, and note the displayed address (e.g. `192.168.1.1:8888`)
+- An MCP-compatible client (Claude Desktop, VS Code with Copilot, Cursor, …)
+
 ## 🚀 Quick Start
 
-You need the Money Manager app's web server running on your phone, on the **same Wi-Fi network** as your computer. To start it: open the app → **More (⋮) → PC Manager → Start**, and note the displayed address (e.g. `192.168.1.1:8888`).
-
-Then add the server to your AI client.
+Add the server to your AI client.
 
 ### VS Code / GitHub Copilot
 
@@ -72,7 +76,7 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 }
 ```
 
-> 📖 For full client setup, environment variables, and config files, see the [Setup Guide](docs/SETUP.md).
+> 📖 **Advanced users** — running from source, environment variables, config files, and per-client setup are covered in the [Setup Guide](docs/SETUP.md).
 
 ## 📋 Tools
 
@@ -86,7 +90,19 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 | Transfers    | `transfer_create`, `transfer_update`                                                 |
 | Dashboard    | `dashboard_get_overview`, `dashboard_get_asset_chart`                                |
 
-> 📖 Parameters and example prompts: [Usage Guide](docs/USAGE.md)
+## 💬 Example Usage
+
+Once connected, just talk to your AI assistant:
+
+| You say                                      | Tool used                |
+| -------------------------------------------- | ------------------------ |
+| "What did I spend last month?"               | `summary_get_period`     |
+| "Record a $45 grocery expense from checking" | `transaction_create`     |
+| "Transfer $200 from checking to savings"     | `transfer_create`        |
+| "Export November's transactions to Excel"    | `summary_export_excel`   |
+| "Show my net worth trend"                    | `dashboard_get_overview` |
+
+> 📖 More example prompts and multi-step workflows: [Usage Guide](docs/USAGE.md)
 
 ## 📚 Documentation
 
