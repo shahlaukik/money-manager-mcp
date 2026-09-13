@@ -1,10 +1,17 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { config as dotenvConfig } from "dotenv";
 
-// Load environment variables from a .env file, if present.
-dotenvConfig();
+// Load environment variables from a .env file, if present. Node's built-in
+// loader has dotenv's default semantics: it never overrides variables already
+// set in the real environment, and only a missing file is silently ignored.
+try {
+  process.loadEnvFile();
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+    throw error;
+  }
+}
 
 /**
  * Configuration schema. Defaults are declared here so the schema itself is the

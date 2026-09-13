@@ -593,7 +593,7 @@ export const TOOLS: AnyToolDefinition[] = [
   {
     name: "summary_export_excel",
     description:
-      "Exports transaction data to Excel file. The server returns an HTML-based Excel format. Use .xls extension for best compatibility (if .xlsx is provided, it will be auto-corrected to .xls with a warning).",
+      "Exports transaction data to Excel file. The server returns an HTML-based Excel format. Use .xls extension for best compatibility (if .xlsx is provided, it will be auto-corrected to .xls with a warning). outputPath must be a relative .xls/.xlsx path inside the working directory — other extensions, absolute paths, and parent-directory traversal are rejected.",
     schema: SummaryExportExcelInputSchema,
     handler: handleSummaryExportExcel,
   },

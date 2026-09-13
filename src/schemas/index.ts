@@ -169,23 +169,33 @@ export type SummaryGetPeriodInput = z.infer<typeof SummaryGetPeriodInputSchema>;
  * True if `outputPath` resolves to a location inside the current working
  * directory. Symlinks on the deepest existing ancestor are resolved too, so a
  * pre-existing link under the cwd pointing elsewhere fails the check instead
- * of smuggling the export outside the working directory. Any lookup error
- * fails closed.
+ * of smuggling the export outside the working directory.
+ *
+ * Existence is probed with `lstatSync` (which does not follow symlinks), so a
+ * dangling symlink at any point along the path stops the walk and gets fully
+ * resolved — a dangling link would otherwise pass an `existsSync` probe (its
+ * target doesn't exist) and be followed by the eventual write. Any lookup
+ * error fails closed.
  */
-function resolvesInsideWorkingDirectory(outputPath: string): boolean {
+export function resolvesInsideWorkingDirectory(outputPath: string): boolean {
   try {
     const cwd = fs.realpathSync(process.cwd());
     const resolved = path.resolve(process.cwd(), outputPath);
 
     // The export file usually doesn't exist yet; walk up to the deepest
-    // ancestor that does and resolve symlinks from there.
+    // ancestor that exists and resolve symlinks from there.
     let existing = resolved;
-    while (!fs.existsSync(existing)) {
-      const parent = path.dirname(existing);
-      if (parent === existing) {
-        break; // reached the filesystem root
+    for (;;) {
+      try {
+        fs.lstatSync(existing);
+        break;
+      } catch {
+        const parent = path.dirname(existing);
+        if (parent === existing) {
+          break; // reached the filesystem root
+        }
+        existing = parent;
       }
-      existing = parent;
     }
     const target = path.join(
       fs.realpathSync(existing),
@@ -206,11 +216,14 @@ function resolvesInsideWorkingDirectory(outputPath: string): boolean {
 /**
  * Input schema for summary_export_excel tool
  *
- * `outputPath` must resolve inside the server's working directory. This stops
- * a caller from exporting financial data to an arbitrary location (e.g.
- * `../../../../etc/...`, an absolute path, or a symlink planted under the cwd
- * pointing outside it). The check runs in validation so a malicious or
- * prompt-injected client is rejected before the handler runs.
+ * `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the
+ * server's working directory. This stops a caller from exporting financial
+ * data to an arbitrary location (e.g. `../../../../etc/...`, an absolute path,
+ * or a symlink planted under the cwd pointing outside it) and from using the
+ * export as a primitive to overwrite non-export files (`.gitconfig`,
+ * `package.json`, …) inside the working directory. The checks run in
+ * validation so a malicious or prompt-injected client is rejected before the
+ * handler runs; the write path re-runs the containment check at write time.
  */
 export const SummaryExportExcelInputSchema = z
   .object({
@@ -220,6 +233,11 @@ export const SummaryExportExcelInputSchema = z
     assetId: z.string().optional(),
     inOutType: z.string().optional(),
     outputPath: NonEmptyString,
+  })
+  .refine((data) => /\.(xlsx|xls)$/i.test(data.outputPath), {
+    message:
+      "outputPath must end in .xls or .xlsx (other extensions are not allowed).",
+    path: ["outputPath"],
   })
   .refine((data) => resolvesInsideWorkingDirectory(data.outputPath), {
     message:

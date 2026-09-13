@@ -25,7 +25,6 @@ This document describes the architecture of the Money Manager MCP (Model Context
 | `fastmcp`                 | MCP server framework (transport, dispatch, schema) |
 | `axios`                   | HTTP client for API calls                          |
 | `zod`                     | Input schema validation (also drives tool schemas) |
-| `dotenv`                  | Environment variable management                    |
 | `xml2js`                  | XML response parsing (for transaction list)        |
 | `tough-cookie`            | Cookie/session management                          |
 | `axios-cookiejar-support` | Cookie jar integration with axios                  |
@@ -246,7 +245,7 @@ Highest priority first:
 
 ### Configuration Loading
 
-1. Load `.env` file if present (via `dotenv`)
+1. Load `.env` file if present (via Node's built-in `process.loadEnvFile`)
 2. Merge file config + env config + CLI override
 3. Validate with the Zod schema, which fills in defaults
 
@@ -259,7 +258,7 @@ Highest priority first:
 1. **No Credential Storage**: API uses session cookies only
 2. **Cookie Persistence**: Session cookies stored locally with owner-only file permissions (excluded from git)
 3. **Input Validation**: All tool inputs validated with Zod schemas
-4. **Export Confinement**: `summary_export_excel`'s `outputPath` must resolve inside the server's working directory — absolute paths, `..` traversal, and symlinks pointing outside it are rejected during input validation
+4. **Export Confinement**: `summary_export_excel`'s `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the server's working directory — other extensions, absolute paths, `..` traversal, and symlinks (including dangling ones) pointing outside it are rejected during input validation and re-checked immediately before the file is written. The write goes through an exclusive temp file and an atomic rename, so a symlink planted between validation and write is replaced rather than followed
 5. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
 
 ### Files Excluded from Repository

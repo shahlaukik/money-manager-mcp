@@ -158,7 +158,7 @@ Exports transaction data to an Excel file.
 | `startDate`  | string | Yes      | Start date (YYYY-MM-DD)                                                                                                  |
 | `endDate`    | string | Yes      | End date (YYYY-MM-DD)                                                                                                    |
 | `mbid`       | string | Yes      | Money book ID                                                                                                            |
-| `outputPath` | string | Yes      | Relative path inside the server's working directory (use .xls extension; absolute paths and `..` traversal are rejected) |
+| `outputPath` | string | Yes      | Relative `.xls`/`.xlsx` path inside the server's working directory (other extensions, absolute paths, `..` traversal, and symlinks pointing outside are rejected; `.xlsx` is auto-corrected to `.xls`) |
 | `assetId`    | string | No       | Filter by asset                                                                                                          |
 | `inOutType`  | string | No       | Filter by type                                                                                                           |
 
@@ -440,7 +440,7 @@ These are inherent to the upstream Money Manager HTTP API, not the MCP server. T
 
 3. **Credit cards cannot be deleted.** The upstream API exposes no card-delete endpoint, so there is no `card_delete` tool. Remove a card manually in the Money Manager Android app.
 
-4. **Excel export is HTML-based `.xls`, not real XLSX.** If you pass a `.xlsx` path it is auto-corrected to `.xls` with a warning, since the server's HTML-based Excel format only opens cleanly as `.xls`.
+4. **Excel export is HTML-based `.xls`, not real XLSX.** If you pass a `.xlsx` path it is auto-corrected to `.xls` with a warning, since the server's HTML-based Excel format only opens cleanly as `.xls`. `outputPath` must end in `.xls`/`.xlsx` and resolve inside the server's working directory — other extensions are rejected so the export cannot be used to overwrite unrelated files.
 
 5. **`transaction_list` can hang on empty date ranges.** This is a known upstream server bug. If a list call times out, narrow the range or confirm it contains data first.
 

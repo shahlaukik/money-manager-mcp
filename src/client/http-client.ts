@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosResponse } from "axios";
 import { wrapper } from "axios-cookiejar-support";
+import { randomUUID } from "node:crypto";
 import { CookieJar } from "tough-cookie";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -9,10 +10,12 @@ import type { Config } from "../config/index.js";
 import {
   NetworkError,
   APIError,
+  FileError,
   SessionError,
   wrapError,
   type McpError,
 } from "../errors/index.js";
+import { resolvesInsideWorkingDirectory } from "../schemas/index.js";
 import { isIdentPart, isIdentStart, isWhitespaceChar } from "./identifiers.js";
 
 /**
@@ -189,9 +192,38 @@ export class HttpClient {
       }),
     );
 
+    // Re-run the containment guard as late as possible: schema validation
+    // happened before the network call, and the filesystem may have changed
+    // while it was in flight (e.g. a symlink planted under the working
+    // directory). Fails closed on any lookup error.
+    if (!resolvesInsideWorkingDirectory(outputPath)) {
+      throw new FileError(
+        `Refusing to write export outside the working directory: ${outputPath}`,
+      );
+    }
+
     const dir = path.dirname(outputPath);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(outputPath, Buffer.from(response.data));
+
+    // Write to a fresh exclusive temp file next to the target, then rename it
+    // into place. "wx" never follows or overwrites anything pre-existing, and
+    // rename replaces a symlink at `outputPath` instead of following it, so a
+    // link planted between the guard and the write cannot redirect the export
+    // outside the working directory. 0600: exports carry financial data.
+    const tmpPath = path.join(
+      dir,
+      `.${path.basename(outputPath)}.${randomUUID()}.tmp`,
+    );
+    try {
+      await fs.writeFile(tmpPath, Buffer.from(response.data), {
+        flag: "wx",
+        mode: 0o600,
+      });
+      await fs.rename(tmpPath, outputPath);
+    } catch (error) {
+      void fs.rm(tmpPath, { force: true }).catch(() => {});
+      throw error;
+    }
     const { size } = await fs.stat(outputPath);
     return { filePath: outputPath, fileSize: size };
   }
