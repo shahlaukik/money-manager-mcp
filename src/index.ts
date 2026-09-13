@@ -57,10 +57,10 @@ async function main(): Promise<void> {
   const log = (msg: string) => console.error(`[money-manager-mcp] ${msg}`);
 
   const cliBaseUrl = parseBaseUrlArg();
-  const config: Config = loadConfig({ baseUrl: cliBaseUrl });
+  const config: Config = await loadConfig({ baseUrl: cliBaseUrl });
   log(`Base URL: ${config.server.baseUrl}`);
 
-  const httpClient = createHttpClient(config);
+  const httpClient = await createHttpClient(config);
   log("HTTP client initialized.");
 
   const server = new FastMCP({

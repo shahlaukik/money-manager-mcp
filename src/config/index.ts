@@ -1,6 +1,6 @@
 import { z } from "zod";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { config as dotenvConfig } from "dotenv";
 
 // Load environment variables from a .env file, if present.
@@ -51,8 +51,10 @@ const CONFIG_FILE = ".money-manager-mcp.json";
  *   3. `.money-manager-mcp.json` in the working directory
  *   4. Schema defaults
  */
-export function loadConfig(overrides: { baseUrl?: string } = {}): Config {
-  const fileConfig = loadConfigFile();
+export async function loadConfig(
+  overrides: { baseUrl?: string } = {},
+): Promise<Config> {
+  const fileConfig = await loadConfigFile();
   const envConfig = loadEnvConfig();
   const cliConfig = overrides.baseUrl
     ? { server: { baseUrl: overrides.baseUrl } }
@@ -64,19 +66,21 @@ export function loadConfig(overrides: { baseUrl?: string } = {}): Config {
 }
 
 /** Reads the optional JSON config file from the working directory. */
-function loadConfigFile(): Record<string, unknown> {
+async function loadConfigFile(): Promise<Record<string, unknown>> {
   const configPath = path.resolve(process.cwd(), CONFIG_FILE);
-  if (!fs.existsSync(configPath)) return {};
   try {
-    return JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<
+    return JSON.parse(await fs.readFile(configPath, "utf-8")) as Record<
       string,
       unknown
     >;
   } catch (error) {
-    console.warn(
-      `Warning: Failed to parse config file at ${configPath}:`,
-      error,
-    );
+    // A missing file is the normal no-config case.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(
+        `Warning: Failed to read config file at ${configPath}:`,
+        error,
+      );
+    }
     return {};
   }
 }

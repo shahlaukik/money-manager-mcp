@@ -5,8 +5,8 @@ import axios, {
 } from "axios";
 import { wrapper } from "axios-cookiejar-support";
 import { CookieJar } from "tough-cookie";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { parseStringPromise } from "xml2js";
 
 import type { Config } from "../config/index.js";
@@ -52,24 +52,34 @@ function toFormValue(value: unknown): string {
  *  - XML for transaction lists
  */
 export class HttpClient {
-  private readonly client: AxiosInstance;
+  /** Axios instance; created in initialize() once the session jar is final. */
+  private client!: AxiosInstance;
   private cookieJar: CookieJar;
   /** Last persisted cookie state — lets saves skip no-op disk writes. */
   private lastSavedCookies: string | undefined;
+  /** Serializes cookie writes so queued async saves cannot interleave. */
+  private cookieSaveChain: Promise<void> = Promise.resolve();
   private readonly config: Config;
 
   constructor(config: Config) {
     this.config = config;
     this.cookieJar = new CookieJar();
+  }
 
-    if (config.session?.persist) {
-      this.loadCookies();
+  /**
+   * Restores the persisted session (if enabled) and creates the axios
+   * instance bound to the final cookie jar. Must complete before the first
+   * request; `createHttpClient` takes care of awaiting it.
+   */
+  async initialize(): Promise<void> {
+    if (this.config.session?.persist) {
+      await this.loadCookies();
     }
 
     this.client = wrapper(
       axios.create({
-        baseURL: `${config.server.baseUrl}/moneyBook`,
-        timeout: config.server.timeout,
+        baseURL: `${this.config.server.baseUrl}/moneyBook`,
+        timeout: this.config.server.timeout,
         jar: this.cookieJar,
         maxContentLength: MAX_RESPONSE_BYTES,
         maxBodyLength: MAX_RESPONSE_BYTES,
@@ -172,11 +182,10 @@ export class HttpClient {
     );
 
     const dir = path.dirname(outputPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(outputPath, Buffer.from(response.data));
-    return { filePath: outputPath, fileSize: fs.statSync(outputPath).size };
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(outputPath, Buffer.from(response.data));
+    const { size } = await fs.stat(outputPath);
+    return { filePath: outputPath, fileSize: size };
   }
 
   // ------------------------------------------------------------- retry / errors
@@ -432,12 +441,17 @@ export class HttpClient {
     );
   }
 
-  /** Loads cookies from the persisted file, if present. */
-  private loadCookies(): void {
+  /**
+   * Loads cookies from the persisted file, if present. Runs before the axios
+   * instance is created, so the deserialized jar can simply replace the empty
+   * one axios would otherwise bind.
+   */
+  private async loadCookies(): Promise<void> {
     const cookiePath = this.getCookiePath();
-    if (!fs.existsSync(cookiePath)) return;
     try {
-      const cookies: unknown = JSON.parse(fs.readFileSync(cookiePath, "utf-8"));
+      const cookies: unknown = JSON.parse(
+        await fs.readFile(cookiePath, "utf-8"),
+      );
       if (cookies && typeof cookies === "object") {
         this.cookieJar = CookieJar.deserializeSync(
           cookies as CookieJar.Serialized,
@@ -449,32 +463,48 @@ export class HttpClient {
         );
       }
     } catch (error) {
-      this.log("warn", `Failed to load cookies from ${cookiePath}:`, error);
+      // A missing file is the normal first-run case.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        this.log("warn", `Failed to load cookies from ${cookiePath}:`, error);
+      }
     }
   }
 
-  /** Persists cookies to disk (skipped when unchanged since the last write). */
+  /**
+   * Persists cookies to disk, queued so async writes cannot interleave.
+   * Unchanged state is skipped. A write still pending at process exit is
+   * simply lost — the client re-authenticates on the next start.
+   */
   private saveCookies(): void {
+    this.cookieSaveChain = this.cookieSaveChain
+      .then(() => this.writeCookiesIfChanged())
+      .catch((error: unknown) => {
+        this.log(
+          "warn",
+          `Failed to save cookies to ${this.getCookiePath()}:`,
+          error,
+        );
+      });
+  }
+
+  private async writeCookiesIfChanged(): Promise<void> {
     const cookiePath = this.getCookiePath();
+    const serialized = JSON.stringify(this.cookieJar.serializeSync(), null, 2);
+    if (serialized === this.lastSavedCookies) return;
     try {
-      const serialized = JSON.stringify(
-        this.cookieJar.serializeSync(),
-        null,
-        2,
-      );
-      if (serialized === this.lastSavedCookies) return;
-      this.lastSavedCookies = serialized;
       // 0600: live session cookies must not be group/world readable. `mode`
       // only applies at file creation, so chmod also tightens files written
       // before this hardening.
-      fs.writeFileSync(cookiePath, serialized, { mode: 0o600 });
+      await fs.writeFile(cookiePath, serialized, { mode: 0o600 });
       try {
-        fs.chmodSync(cookiePath, 0o600);
+        await fs.chmod(cookiePath, 0o600);
       } catch {
         // Filesystems without chmod support (e.g. some Windows shares) are fine.
       }
+      this.lastSavedCookies = serialized;
     } catch (error) {
-      this.log("warn", `Failed to save cookies to ${cookiePath}:`, error);
+      this.lastSavedCookies = undefined; // retry on the next response
+      throw error; // logged by the saveCookies chain
     }
   }
 
@@ -513,7 +543,9 @@ export class HttpClient {
   }
 }
 
-/** Creates a new HTTP client instance. */
-export function createHttpClient(config: Config): HttpClient {
-  return new HttpClient(config);
+/** Creates a new HTTP client, restoring any persisted session. */
+export async function createHttpClient(config: Config): Promise<HttpClient> {
+  const client = new HttpClient(config);
+  await client.initialize();
+  return client;
 }
