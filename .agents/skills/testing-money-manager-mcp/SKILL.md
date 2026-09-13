@@ -15,29 +15,30 @@ There is no test runner and no CI. This live protocol IS the verification.
 
 ## Tool coverage checklist (all 18 — the final report must account for each)
 
-| #   | Tool                        | Where exercised                               |
-| --- | --------------------------- | --------------------------------------------- |
-| 1   | `init_get_data`             | Phase 0 (first call — baseline context) + 1   |
-| 2   | `transaction_list`          | Phase 0/1, id discovery in Phases 4–5         |
-| 3   | `transaction_create`        | Phase 4                                       |
-| 4   | `transaction_update`        | Phase 4                                       |
-| 5   | `transaction_delete`        | Phase 4 (bulk), Phase 5                       |
-| 6   | `summary_get_period`        | Phase 1                                       |
-| 7   | `summary_export_excel`      | Phase 2 (both `.xls` and `.xlsx` paths)       |
-| 8   | `asset_list`                | Phase 0/1, discovery in Phases 3–5, Phase 7   |
-| 9   | `asset_create`              | Phases 3–4                                    |
-| 10  | `asset_update`              | Phase 3                                       |
-| 11  | `asset_delete`              | Phases 3 and 5                                |
-| 12  | `card_list`                 | Phase 0 (drives card-test decision), 1, 6     |
-| 13  | `card_create`               | Phase 6 (conditional — see safety contract)   |
-| 14  | `card_update`               | Phase 6 (conditional, created test card only) |
-| 15  | `transfer_create`           | Phase 5                                       |
-| 16  | `transfer_update`           | Phase 5                                       |
-| 17  | `dashboard_get_overview`    | Phase 1                                       |
-| 18  | `dashboard_get_asset_chart` | Phase 1                                       |
+| #   | Tool                        | Where exercised                             |
+| --- | --------------------------- | ------------------------------------------- |
+| 1   | `init_get_data`             | Phase 0 (first call — baseline context) + 1 |
+| 2   | `transaction_list`          | Phase 0/1, id discovery in Phases 4–5       |
+| 3   | `transaction_create`        | Phase 4                                     |
+| 4   | `transaction_update`        | Phase 4                                     |
+| 5   | `transaction_delete`        | Phase 4 (bulk), Phase 5                     |
+| 6   | `summary_get_period`        | Phase 1                                     |
+| 7   | `summary_export_excel`      | Phase 2 (both `.xls` and `.xlsx` paths)     |
+| 8   | `asset_list`                | Phase 0/1, discovery in Phases 3–5, Phase 7 |
+| 9   | `asset_create`              | Phases 3–4                                  |
+| 10  | `asset_update`              | Phase 3                                     |
+| 11  | `asset_delete`              | Phases 3 and 5                              |
+| 12  | `card_list`                 | Phase 0 (drives card-test decision), 1, 6   |
+| 13  | `card_create`               | Phase 6 (consent-gated, default: run)       |
+| 14  | `card_update`               | Phase 6 (consent-gated, test card only)     |
+| 15  | `transfer_create`           | Phase 5                                     |
+| 16  | `transfer_update`           | Phase 5                                     |
+| 17  | `dashboard_get_overview`    | Phase 1                                     |
+| 18  | `dashboard_get_asset_chart` | Phase 1                                     |
 
-`card_create`/`card_update` may be SKIPPED per the safety contract — a skip
-with reason satisfies the checklist; a silent omission does not.
+`card_create`/`card_update` are consent-gated (Phase 6 — ask the user,
+recommended default: proceed). A user-declined skip with reason satisfies
+the checklist; a silent omission does not.
 
 ## Non-negotiable safety contract
 
@@ -52,13 +53,17 @@ The upstream server holds the user's real financial data. Absolute rules:
    at the end (exact `totalBalance` match, artifact-free lists).
 4. **`card_create` is a permanent artifact.** The upstream API has no
    card-delete endpoint, so a created card can never be removed
-   programmatically. Rules:
-   - If any card already exists (the user's real card), **skip all card
-     mutation tests** and report them as SKIPPED — updating a real card
-     violates rule 1.
-   - Only if `card_list` is empty: create exactly ONE test card (distinctive
-     name, linked to a throwaway test asset), test `card_update` on it, and
-     flag it in the final report for manual deletion in the app.
+   programmatically — only manually in the app. Rules:
+   - Never `card_update` or otherwise touch a pre-existing (real) card —
+     that violates rule 1. Card tests run only on a dedicated `MCP-TEST-`
+     card.
+   - **Ask the user for consent before any card mutation** (Phase 6). The
+     recommended default is to PROCEED: the test card can be deleted
+     manually in the Money Manager app afterward. Only skip if the user
+     explicitly declines.
+   - Reuse before creating: if a leftover `MCP-TEST-` card from an earlier
+     run already exists, reuse it for `card_update` instead of creating
+     yet another one.
 5. **On unexpected failure mid-run: stop mutating, run the cleanup pass, then
    report.** Never leave the run in a half-mutated state.
 6. **Rebuild before testing, restart before trusting.** After any `src/`
@@ -125,18 +130,37 @@ Create two throwaway assets (A and B) as in Phase 3. On A:
    `transaction_delete` both sides of the NEW transfer. Verify both assets
    show `count: 0`, then `asset_delete` A and B.
 
-## Phase 6 — Card tests (conditional)
+## Phase 6 — Card tests (consent-gated; default: run them)
 
-Apply the rule from the safety contract: reuse-and-update nothing real; at
-most one created card, tested via `card_create` → `card_list` (discover id) →
-`card_update` (rename). Record the created card's name + id for the report.
+Ask the user before mutating anything here, presenting the trade-off and the
+options, e.g.:
+
+> `card_create` leaves a permanent test card — the upstream API has no
+> card-delete endpoint, so it can only be removed manually in the Money
+> Manager app after the run. Proceed with the card_create/card_update tests?
+> (Recommended: yes — I'll give you the exact card name to delete manually.)
+
+Default/recommended option: **proceed**. Only mark these tools SKIPPED
+(reason: user declined) if the user explicitly chooses to skip.
+
+If proceeding:
+
+1. If a leftover `MCP-TEST-` card exists from an earlier run (`card_list`),
+   REUSE it: `card_update` (rename) → verify via `card_list`. Do not create
+   another card.
+2. Otherwise `card_create` exactly ONE test card — distinctive `MCP-TEST-`
+   name, linked to a throwaway test asset from Phase 4/5 (recreate one if
+   needed, and delete it again in this phase's cleanup) — then `card_list`
+   to discover the new id, `card_update` (rename), verify via `card_list`.
+3. Record the card's name + id in the report's manual-deletion list.
 
 ## Phase 7 — Final verification & report
 
 - `asset_list`: `totalBalance` **exactly** equals the Phase-0 baseline; no
   `MCP-TEST-` assets remain.
-- `card_list`: card count matches the decision made in Phase 6 (baseline, or
-  baseline + 1 flagged artifact).
+- `card_list`: card count matches the Phase-6 outcome (baseline if declined,
+  baseline + 1 if a test card was created, unchanged if a leftover test card
+  was reused).
 - `transaction_list` on the baseline range: count matches baseline.
 - `git status`: clean (no leftover export files).
 
