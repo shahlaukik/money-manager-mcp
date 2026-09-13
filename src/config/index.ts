@@ -13,7 +13,12 @@ dotenvConfig();
  */
 export const ConfigSchema = z.object({
   server: z.object({
-    baseUrl: z.string().url(),
+    // http(s) only: axios cannot speak other schemes, and rejecting them here
+    // gives a clear validation error instead of a confusing request failure.
+    baseUrl: z
+      .string()
+      .url()
+      .regex(/^https?:\/\//, "baseUrl must start with http:// or https://"),
     timeout: z.number().min(1000).max(120000).default(30000),
     retryCount: z.number().min(0).max(10).default(3),
     retryDelay: z.number().min(100).max(10000).default(1000),
@@ -23,13 +28,15 @@ export const ConfigSchema = z.object({
       persist: z.boolean().default(true),
       cookieFile: z.string().default(".session-cookies.json"),
     })
-    .default({}),
+    // prefault: the `{}` input is parsed so the field-level defaults apply
+    // (zod v4's `.default()` would require the fully-resolved output shape).
+    .prefault({}),
   logging: z
     .object({
       level: z.enum(["debug", "info", "warn", "error"]).default("info"),
       format: z.enum(["json", "text"]).default("json"),
     })
-    .default({}),
+    .prefault({}),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -44,9 +51,7 @@ const CONFIG_FILE = ".money-manager-mcp.json";
  *   3. `.money-manager-mcp.json` in the working directory
  *   4. Schema defaults
  */
-export async function loadConfig(
-  overrides: { baseUrl?: string } = {},
-): Promise<Config> {
+export function loadConfig(overrides: { baseUrl?: string } = {}): Config {
   const fileConfig = loadConfigFile();
   const envConfig = loadEnvConfig();
   const cliConfig = overrides.baseUrl
@@ -63,9 +68,15 @@ function loadConfigFile(): Record<string, unknown> {
   const configPath = path.resolve(process.cwd(), CONFIG_FILE);
   if (!fs.existsSync(configPath)) return {};
   try {
-    return JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    return JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<
+      string,
+      unknown
+    >;
   } catch (error) {
-    console.warn(`Warning: Failed to parse config file at ${configPath}:`, error);
+    console.warn(
+      `Warning: Failed to parse config file at ${configPath}:`,
+      error,
+    );
     return {};
   }
 }
@@ -109,6 +120,11 @@ function deepMerge(
 ): Record<string, unknown> {
   const result = { ...target };
   for (const key of Object.keys(source)) {
+    // Never merge magic keys: assigning "__proto__" swaps the merged object's
+    // prototype instead of setting an own property.
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      continue;
+    }
     const sv = source[key];
     const tv = result[key];
     if (
@@ -131,7 +147,11 @@ function deepMerge(
 }
 
 /** Sets a dotted path (e.g. "server.baseUrl") on `obj`, creating objects as needed. */
-function deepSet(obj: Record<string, unknown>, path: string, value: unknown): void {
+function deepSet(
+  obj: Record<string, unknown>,
+  path: string,
+  value: unknown,
+): void {
   const keys = path.split(".");
   let cursor = obj;
   for (let i = 0; i < keys.length - 1; i++) {

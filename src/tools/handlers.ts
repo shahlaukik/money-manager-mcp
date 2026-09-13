@@ -266,10 +266,10 @@ export async function handleSummaryGetPeriod(
   client: HttpClient,
   args: SummaryGetPeriodInput,
 ) {
-  const raw = await client.get<RawSummaryResponse>(
-    "/getSummaryDataByPeriod",
-    { startDate: args.startDate, endDate: args.endDate },
-  );
+  const raw = await client.get<RawSummaryResponse>("/getSummaryDataByPeriod", {
+    startDate: args.startDate,
+    endDate: args.endDate,
+  });
   return {
     summary: raw.summary,
     incomeByCategory: raw.income || [],
@@ -552,7 +552,7 @@ type AnyToolDefinition = ToolDefinition<unknown>;
  * and used for validation by FastMCP) + handler. The array is cast to the erased
  * type — each entry is fully type-checked against its own schema's input above.
  */
-export const TOOLS: AnyToolDefinition[] = ([
+export const TOOLS: AnyToolDefinition[] = [
   {
     name: "init_get_data",
     description:
@@ -670,4 +670,4 @@ export const TOOLS: AnyToolDefinition[] = ([
     schema: DashboardGetAssetChartInputSchema,
     handler: handleDashboardGetAssetChart,
   },
-] as AnyToolDefinition[]);
+] as AnyToolDefinition[];

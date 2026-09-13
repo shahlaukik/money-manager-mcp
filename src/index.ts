@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   const log = (msg: string) => console.error(`[money-manager-mcp] ${msg}`);
 
   const cliBaseUrl = parseBaseUrlArg();
-  const config: Config = await loadConfig({ baseUrl: cliBaseUrl });
+  const config: Config = loadConfig({ baseUrl: cliBaseUrl });
   log(`Base URL: ${config.server.baseUrl}`);
 
   const httpClient = createHttpClient(config);

@@ -272,40 +272,40 @@ export const CardListInputSchema = z.object({});
 export type CardListInput = z.infer<typeof CardListInputSchema>;
 
 /**
- * Day of month (1-31).
+ * Day of month (1-31), shared by card_create / card_update.
  *
- * Defined INLINE in card_create / card_update rather than as a shared
- * `DayOfMonthSchema` constant. Zod's JSON-Schema converter deduplicates shared
- * subschemas into `$ref` pointers — and many MCP clients don't resolve `$ref`,
- * so they see `{"$ref": ...}` with no explicit type, default to a string, and
- * send `"15"` instead of `15`. Zod then (correctly) rejects the string. For
- * string fields this is harmless (mis-serializing as a string is still valid),
- * but for integer fields like these it breaks card_create. Fresh inline
- * instances each get their own explicit `{"type":"integer"}` in the advertised
- * schema. See docs/USAGE.md "Known limitations" for context.
+ * Zod v4's JSON-Schema conversion — which FastMCP uses for v4 schemas —
+ * inlines reused subschemas by default, so each usage is advertised as an
+ * explicit `{"type":"integer"}`. (Under zod v3 the converter deduplicated
+ * shared subschemas into `$ref` pointers that many MCP clients don't resolve,
+ * so these fields had to be defined inline per schema.)
+ */
+export const DayOfMonthSchema = z.number().int().min(1).max(31);
+
+/**
+ * Input schema for card_create tool
  */
 export const CardCreateInputSchema = z.object({
   cardName: NonEmptyString,
   linkAssetId: AssetIdSchema,
   linkAssetName: NonEmptyString,
   notPayMoney: z.number(),
-  jungsanDay: z.number().int().min(1).max(31).optional(),
-  paymentDay: z.number().int().min(1).max(31).optional(),
+  jungsanDay: DayOfMonthSchema.optional(),
+  paymentDay: DayOfMonthSchema.optional(),
 });
 
 export type CardCreateInput = z.infer<typeof CardCreateInputSchema>;
 
 /**
- * Input schema for card_update tool. See card_create for why the day-of-month
- * fields are defined inline.
+ * Input schema for card_update tool
  */
 export const CardUpdateInputSchema = z.object({
   assetId: AssetIdSchema,
   cardName: NonEmptyString,
   linkAssetId: AssetIdSchema,
   linkAssetName: NonEmptyString,
-  jungsanDay: z.number().int().min(1).max(31).optional(),
-  paymentDay: z.number().int().min(1).max(31).optional(),
+  jungsanDay: DayOfMonthSchema.optional(),
+  paymentDay: DayOfMonthSchema.optional(),
 });
 
 export type CardUpdateInput = z.infer<typeof CardUpdateInputSchema>;
@@ -370,4 +370,3 @@ export const DashboardGetAssetChartInputSchema = z.object({
 export type DashboardGetAssetChartInput = z.infer<
   typeof DashboardGetAssetChartInputSchema
 >;
-

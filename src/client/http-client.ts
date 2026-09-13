@@ -1,4 +1,8 @@
-import axios, { type AxiosInstance, type AxiosError, type AxiosResponse } from "axios";
+import axios, {
+  type AxiosInstance,
+  type AxiosError,
+  type AxiosResponse,
+} from "axios";
 import { wrapper } from "axios-cookiejar-support";
 import { CookieJar } from "tough-cookie";
 import * as fs from "fs";
@@ -13,11 +17,32 @@ import {
   wrapError,
   type McpError,
 } from "../errors/index.js";
-import {
-  isIdentPart,
-  isIdentStart,
-  isWhitespaceChar,
-} from "./identifiers.js";
+import { isIdentPart, isIdentStart, isWhitespaceChar } from "./identifiers.js";
+
+/**
+ * Cap on response body size (25 MiB). Excel exports are a few MB at most;
+ * anything larger from the phone server is suspect.
+ */
+const MAX_RESPONSE_BYTES = 25 * 1024 * 1024;
+
+/**
+ * Serializes one form-data value. Tool inputs are zod-validated primitives
+ * (strings/numbers/booleans), which pass through unchanged; a structured
+ * value serializes as JSON rather than collapsing to "[object Object]".
+ */
+function toFormValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "number" ||
+    typeof value === "bigint" ||
+    typeof value === "boolean"
+  ) {
+    return String(value);
+  }
+  // JSON.stringify only returns undefined for symbols/functions, which never
+  // occur in tool inputs.
+  return JSON.stringify(value);
+}
 
 /**
  * HTTP client with cookie/session management for the Money Manager API.
@@ -29,6 +54,8 @@ import {
 export class HttpClient {
   private readonly client: AxiosInstance;
   private cookieJar: CookieJar;
+  /** Last persisted cookie state — lets saves skip no-op disk writes. */
+  private lastSavedCookies: string | undefined;
   private readonly config: Config;
 
   constructor(config: Config) {
@@ -44,11 +71,12 @@ export class HttpClient {
         baseURL: `${config.server.baseUrl}/moneyBook`,
         timeout: config.server.timeout,
         jar: this.cookieJar,
+        maxContentLength: MAX_RESPONSE_BYTES,
+        maxBodyLength: MAX_RESPONSE_BYTES,
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           Accept: "application/json, text/xml, */*",
         },
-        withCredentials: true,
       }),
     );
 
@@ -59,7 +87,9 @@ export class HttpClient {
       },
       (error: unknown) => {
         this.log("error", "Request error:", error);
-        return Promise.reject(error);
+        return Promise.reject(
+          error instanceof Error ? error : new Error(String(error)),
+        );
       },
     );
 
@@ -88,11 +118,13 @@ export class HttpClient {
     endpoint: string,
     params?: Record<string, string | number | undefined>,
   ): Promise<T> {
-    const response = await this.executeWithRetry<string>(() =>
-      this.client.get<string>(endpoint, {
-        params: this.filterUndefined(params),
-        responseType: "text",
-      }),
+    const response = await this.executeWithRetry<string>(
+      () =>
+        this.client.get<string>(endpoint, {
+          params: this.filterUndefined(params),
+          responseType: "text",
+        }),
+      true,
     );
     return this.parseJsLiteralResponse<T>(response.data);
   }
@@ -102,12 +134,14 @@ export class HttpClient {
     endpoint: string,
     params?: Record<string, string | number | undefined>,
   ): Promise<T> {
-    const response = await this.executeWithRetry<string>(() =>
-      this.client.get<string>(endpoint, {
-        params: this.filterUndefined(params),
-        responseType: "text",
-        headers: { Accept: "text/xml" },
-      }),
+    const response = await this.executeWithRetry<string>(
+      () =>
+        this.client.get<string>(endpoint, {
+          params: this.filterUndefined(params),
+          responseType: "text",
+          headers: { Accept: "text/xml" },
+        }),
+      true,
     );
     return this.parseXmlResponse<T>(response.data);
   }
@@ -147,11 +181,18 @@ export class HttpClient {
 
   // ------------------------------------------------------------- retry / errors
 
-  /** Executes a request with exponential-backoff retry on retryable errors. */
+  /**
+   * Executes a request with exponential-backoff retry on retryable errors.
+   *
+   * Only idempotent requests (reads) opt into retry: a timed-out POST may have
+   * already been applied by the server before the error surfaced, and retrying
+   * it would duplicate a financial write. Writes therefore run single-shot.
+   */
   private async executeWithRetry<T>(
     requestFn: () => Promise<AxiosResponse<T>>,
+    idempotent = false,
   ): Promise<AxiosResponse<T>> {
-    const maxRetries = this.config.server.retryCount;
+    const maxRetries = idempotent ? this.config.server.retryCount : 0;
     let lastError: McpError | undefined;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -229,7 +270,7 @@ export class HttpClient {
       return {} as T;
     }
     try {
-      const result = await parseStringPromise(xmlString, {
+      const result: unknown = await parseStringPromise(xmlString, {
         explicitArray: false,
         ignoreAttrs: true,
         trim: true,
@@ -261,10 +302,10 @@ export class HttpClient {
       try {
         return JSON.parse(this.convertJsLiteralToJson(responseText)) as T;
       } catch (conversionError) {
+        // Log size only — the body can contain financial data.
         this.log(
           "error",
-          "Failed to parse response:",
-          responseText.substring(0, 200),
+          `Failed to parse response body (${responseText.length} chars)`,
         );
         throw new APIError(
           `Failed to parse API response: ${String(conversionError)}`,
@@ -328,7 +369,7 @@ export class HttpClient {
       if (isIdentStart(ch)) {
         let ident = ch;
         i++;
-        while (i < n && isIdentPart(jsLiteral[i]!)) {
+        while (i < n && isIdentPart(jsLiteral[i])) {
           ident += jsLiteral[i];
           i++;
         }
@@ -361,7 +402,7 @@ export class HttpClient {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(data)) {
       if (value !== undefined && value !== null) {
-        params.append(key, String(value));
+        params.append(key, toFormValue(value));
       }
     }
     return params.toString();
@@ -396,21 +437,42 @@ export class HttpClient {
     const cookiePath = this.getCookiePath();
     if (!fs.existsSync(cookiePath)) return;
     try {
-      const cookies = JSON.parse(fs.readFileSync(cookiePath, "utf-8"));
+      const cookies: unknown = JSON.parse(fs.readFileSync(cookiePath, "utf-8"));
       if (cookies && typeof cookies === "object") {
-        this.cookieJar = CookieJar.deserializeSync(cookies);
+        this.cookieJar = CookieJar.deserializeSync(
+          cookies as CookieJar.Serialized,
+        );
+        this.lastSavedCookies = JSON.stringify(
+          this.cookieJar.serializeSync(),
+          null,
+          2,
+        );
       }
     } catch (error) {
       this.log("warn", `Failed to load cookies from ${cookiePath}:`, error);
     }
   }
 
-  /** Persists cookies to disk. */
+  /** Persists cookies to disk (skipped when unchanged since the last write). */
   private saveCookies(): void {
     const cookiePath = this.getCookiePath();
     try {
-      const serialized = this.cookieJar.serializeSync();
-      fs.writeFileSync(cookiePath, JSON.stringify(serialized, null, 2));
+      const serialized = JSON.stringify(
+        this.cookieJar.serializeSync(),
+        null,
+        2,
+      );
+      if (serialized === this.lastSavedCookies) return;
+      this.lastSavedCookies = serialized;
+      // 0600: live session cookies must not be group/world readable. `mode`
+      // only applies at file creation, so chmod also tightens files written
+      // before this hardening.
+      fs.writeFileSync(cookiePath, serialized, { mode: 0o600 });
+      try {
+        fs.chmodSync(cookiePath, 0o600);
+      } catch {
+        // Filesystems without chmod support (e.g. some Windows shares) are fine.
+      }
     } catch (error) {
       this.log("warn", `Failed to save cookies to ${cookiePath}:`, error);
     }
@@ -442,7 +504,11 @@ export class HttpClient {
         }),
       );
     } else {
-      console.error(`[${timestamp}] [${level.toUpperCase()}]`, message, ...args);
+      console.error(
+        `[${timestamp}] [${level.toUpperCase()}]`,
+        message,
+        ...args,
+      );
     }
   }
 }

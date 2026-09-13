@@ -34,33 +34,50 @@ export class McpError extends Error {
   }
 }
 
-/** Network-related errors (connection failures, timeouts). Always retryable. */
+/** Network-related errors (connection failures, timeouts). Retryable by default. */
 export class NetworkError extends McpError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super(ErrorCategory.NETWORK, message, true, details);
+  constructor(
+    message: string,
+    details?: Record<string, unknown>,
+    retryable = true,
+  ) {
+    super(ErrorCategory.NETWORK, message, retryable, details);
     this.name = "NetworkError";
   }
 
   static timeout(url: string, timeoutMs: number, hint?: string): NetworkError {
-    return new NetworkError(`Request to ${url} timed out after ${timeoutMs}ms`, {
-      url,
-      timeoutMs,
-      errorType: "TIMEOUT",
-      hint,
-    });
+    return new NetworkError(
+      `Request to ${url} timed out after ${timeoutMs}ms`,
+      {
+        url,
+        timeoutMs,
+        errorType: "TIMEOUT",
+        hint,
+      },
+    );
   }
 
   /**
    * Timeout error with a hint specific to transaction_list: the Money Manager
    * server has a known bug where it hangs on date ranges with no transactions.
+   * Marked non-retryable — the hang never clears on retry, so each attempt
+   * would just burn another full timeout before the client sees the hint.
    */
   static timeoutForTransactionList(
     url: string,
     timeoutMs: number,
   ): NetworkError {
-    return NetworkError.timeout(url, timeoutMs,
-      "The Money Manager server may hang when querying date ranges with no transactions. " +
-        "This is a known server-side limitation. Try a date range that has recorded transactions.",
+    return new NetworkError(
+      `Request to ${url} timed out after ${timeoutMs}ms`,
+      {
+        url,
+        timeoutMs,
+        errorType: "TIMEOUT",
+        hint:
+          "The Money Manager server may hang when querying date ranges with no transactions. " +
+          "This is a known server-side limitation. Try a date range that has recorded transactions.",
+      },
+      false,
     );
   }
 
@@ -72,11 +89,14 @@ export class NetworkError extends McpError {
   }
 
   static unreachable(url: string, originalError?: string): NetworkError {
-    return new NetworkError(`Cannot connect to Money Manager server at ${url}`, {
-      url,
-      originalError,
-      errorType: "UNREACHABLE",
-    });
+    return new NetworkError(
+      `Cannot connect to Money Manager server at ${url}`,
+      {
+        url,
+        originalError,
+        errorType: "UNREACHABLE",
+      },
+    );
   }
 }
 
@@ -112,10 +132,13 @@ export class APIError extends McpError {
   }
 }
 
-/** Session errors (authentication / authorization). Retryable. */
+/**
+ * Session errors (authentication / authorization). Not retryable — resending
+ * the same request with the same session cookies cannot fix a 401/403.
+ */
 export class SessionError extends McpError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(ErrorCategory.SESSION, message, true, details);
+    super(ErrorCategory.SESSION, message, false, details);
     this.name = "SessionError";
   }
 
