@@ -120,8 +120,9 @@ Do not touch `src/index.ts` when adding a tool — the registry loop already cov
 
 The Money Manager HTTP API is unusual. Respect these when writing handlers:
 
-- **Response format is not JSON.** Most endpoints return JavaScript object-literal syntax (single quotes, unquoted keys). The HTTP client parses it (JSON.parse → literal-to-JSON conversion → `new Function(...)` fallback, which is safe because the source is the trusted local API, never user input). Transaction lists come back as **XML**, parsed via `client.getXml()`.
+- **Response format is not JSON.** Most endpoints return JavaScript object-literal syntax (single quotes, unquoted keys). The HTTP client parses it (JSON.parse → non-evaluating literal-to-JSON tokenizer; there is deliberately no `eval`/`new Function` fallback). Transaction lists come back as **XML**, parsed via `client.getXml()`.
 - **All endpoints are under `/moneyBook`** (the client prepends it).
+- **Dates are date-only.** The API silently accepts `YYYY-MM-DDTHH:mm:ss` values, but the app records them as 12:00 AM — the time is never persisted (verified against a live server). All schemas use `DateSchema`; do not add datetime support.
 - **`transfer_update` does not update in place** — the server creates a new transfer with a new ID and the old one becomes invalid. The handler's result message warns about this; keep that warning.
 - **`transaction_list` can hang** on date ranges with no transactions (server bug).
   `NetworkError.timeoutForTransactionList` carries a hint about it.

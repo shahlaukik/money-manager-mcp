@@ -70,6 +70,17 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ---
 
+## Date and Time Handling
+
+All date parameters (`mbDate`, `moveDate`, `startDate`, `endDate`) are
+`YYYY-MM-DD`. The API also accepts `YYYY-MM-DDTHH:mm:ss` values without
+error, but the time is never persisted: the app records the transaction at
+12:00 AM and reads it back as a plain date (verified against a live server).
+This is an upstream limitation — this MCP server uses date-only values
+everywhere.
+
+---
+
 ## API Endpoints Summary
 
 > **Note:** This documents the upstream Money Manager API. Endpoints #1–18 are

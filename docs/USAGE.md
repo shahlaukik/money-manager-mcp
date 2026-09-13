@@ -419,6 +419,8 @@ These are inherent to the upstream Money Manager HTTP API, not the MCP server. T
 
 5. **`transaction_list` can hang on empty date ranges.** This is a known upstream server bug. If a list call times out, narrow the range or confirm it contains data first.
 
+6. **Times are not supported.** The upstream API silently accepts `YYYY-MM-DDTHH:mm:ss` date values, but the app records them as 12:00 AM — the time is never persisted (verified against a live server). All tools use `YYYY-MM-DD`.
+
 ---
 
 ## Troubleshooting
