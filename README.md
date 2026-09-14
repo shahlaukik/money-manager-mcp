@@ -11,8 +11,6 @@
 
 An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants manage personal finances through the **Realbyte Money Manager** app's PC Manager web server.
 
-Each of the **18 tools** is defined once (a Zod schema + handler); the [FastMCP](https://github.com/punkpeye/fastmcp) framework derives validation, schema advertising, and dispatch from that single definition.
-
 ## ✨ Features
 
 - **Full transaction CRUD** — create, read, update, delete income & expenses
@@ -21,6 +19,12 @@ Each of the **18 tools** is defined once (a Zod schema + handler); the [FastMCP]
 - **Reports & export** — period summaries and Excel export
 - **Dashboard** — net-worth trends and portfolio breakdown
 - **Session persistence** — stays logged in across restarts
+
+## 🆕 What's new in v2.0.0
+
+- **Migrated to FastMCP** — the server is now built on the [FastMCP](https://github.com/punkpeye/fastmcp) framework with Zod-validated tool inputs. Same 18 tools, same setup — just a smaller, cleaner, more maintainable codebase.
+- **Security & supply-chain hardening** — removed dynamic code execution from the API response parser, locked Excel exports to your working directory (symlink-safe, atomic writes), retries limited to safe read operations, and all dependencies refreshed (`npm audit`: 0 known vulnerabilities). Node.js ≥ 22.13 is now required.
+- **End-to-end testing skill for AI agents** — the bundled [`testing-money-manager-mcp`](.agents/skills/testing-money-manager-mcp/SKILL.md) skill verifies every tool against a live Money Manager server with throwaway data and guaranteed cleanup.
 
 ## 📦 Prerequisites
 
