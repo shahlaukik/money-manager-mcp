@@ -6,6 +6,8 @@ This document describes the API endpoints used by the Money Manager MCP server t
 
 The application uses **ExtJS** framework with **Ext.Ajax.request** for AJAX calls. The base URI for all API endpoints is `/moneyBook`.
 
+> **Response formats:** most endpoints respond in **JavaScript object-literal syntax** (single quotes, unquoted keys), not strict JSON. Examples below are shown as JSON for readability; the MCP server's HTTP client normalizes the literal syntax before handlers see the data. Transaction lists respond in **XML**.
+
 ---
 
 ## API Discovery Methodology
@@ -70,30 +72,46 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 ---
 
+## Date and Time Handling
+
+All date parameters (`mbDate`, `moveDate`, `startDate`, `endDate`) are
+`YYYY-MM-DD`. The API also accepts `YYYY-MM-DDTHH:mm:ss` values without
+error, but the time is never persisted: the app records the transaction at
+12:00 AM and reads it back as a plain date (verified against a live server).
+This is an upstream limitation — this MCP server uses date-only values
+everywhere.
+
+---
+
 ## API Endpoints Summary
 
-| #   | Endpoint                  | Method   | Category       | Description                           |
-| --- | ------------------------- | -------- | -------------- | ------------------------------------- |
-| 1   | `/getInitData`            | GET/POST | Initialization | Get initial application data          |
-| 2   | `/getDataByPeriod`        | GET      | Transactions   | Get transaction data by date range    |
-| 3   | `/create`                 | POST     | Transactions   | Create a new transaction              |
-| 4   | `/update`                 | POST     | Transactions   | Update an existing transaction        |
-| 5   | `/delete`                 | POST     | Transactions   | Delete transactions                   |
-| 6   | `/getSummaryDataByPeriod` | GET      | Summary        | Get financial summary by period       |
-| 7   | `/getExcelFile`           | POST     | Export         | Export data to Excel file             |
-| 8   | `/getAssetData`           | GET      | Assets         | Get asset list data (tree structure)  |
-| 9   | `/getCardData`            | GET      | Assets         | Get credit card data (tree structure) |
-| 10  | `/assetAdd`               | POST     | Assets         | Add a new asset                       |
-| 11  | `/assetModify`            | POST     | Assets         | Modify an existing asset              |
-| 12  | `/removeAsset`            | POST     | Assets         | Remove an asset                       |
-| 13  | `/addAssetCard`           | POST     | Credit Cards   | Add a new credit card                 |
-| 14  | `/modifyCard`             | POST     | Credit Cards   | Modify a credit card                  |
-| 15  | `/moveAsset`              | POST     | Transfers      | Transfer money between assets         |
-| 16  | `/modifyMoveAsset`        | POST     | Transfers      | Modify an asset transfer              |
-| 17  | `/getDashBoardData`       | GET      | Dashboard      | Get dashboard chart data              |
-| 18  | `/getEachAssetChartData`  | POST     | Dashboard      | Get individual asset chart data       |
-| 19  | `/uploadSqlFile`          | POST     | Backup/Restore | Upload SQLite backup file             |
-| 20  | `/money.sqlite`           | GET      | Backup/Restore | Download SQLite database file         |
+> **Note:** This documents the upstream Money Manager API. Endpoints #1–18 are
+> exposed by this MCP server as tools; #19–20 (backup/restore) intentionally are
+> **not** exposed — they operate on the raw SQLite database and are too dangerous
+> to invoke via an LLM.
+
+| #   | Endpoint                  | Method   | Category       | Description                           | Exposed |
+| --- | ------------------------- | -------- | -------------- | ------------------------------------- | ------- |
+| 1   | `/getInitData`            | GET/POST | Initialization | Get initial application data          | ✅      |
+| 2   | `/getDataByPeriod`        | GET      | Transactions   | Get transaction data by date range    | ✅      |
+| 3   | `/create`                 | POST     | Transactions   | Create a new transaction              | ✅      |
+| 4   | `/update`                 | POST     | Transactions   | Update an existing transaction        | ✅      |
+| 5   | `/delete`                 | POST     | Transactions   | Delete transactions                   | ✅      |
+| 6   | `/getSummaryDataByPeriod` | GET      | Summary        | Get financial summary by period       | ✅      |
+| 7   | `/getExcelFile`           | POST     | Export         | Export data to Excel file             | ✅      |
+| 8   | `/getAssetData`           | GET      | Assets         | Get asset list data (tree structure)  | ✅      |
+| 9   | `/getCardData`            | GET      | Assets         | Get credit card data (tree structure) | ✅      |
+| 10  | `/assetAdd`               | POST     | Assets         | Add a new asset                       | ✅      |
+| 11  | `/assetModify`            | POST     | Assets         | Modify an existing asset              | ✅      |
+| 12  | `/removeAsset`            | POST     | Assets         | Remove an asset                       | ✅      |
+| 13  | `/addAssetCard`           | POST     | Credit Cards   | Add a new credit card                 | ✅      |
+| 14  | `/modifyCard`             | POST     | Credit Cards   | Modify a credit card                  | ✅      |
+| 15  | `/moveAsset`              | POST     | Transfers      | Transfer money between assets         | ✅      |
+| 16  | `/modifyMoveAsset`        | POST     | Transfers      | Modify an asset transfer              | ✅      |
+| 17  | `/getDashBoardData`       | GET      | Dashboard      | Get dashboard chart data              | ✅      |
+| 18  | `/getEachAssetChartData`  | POST     | Dashboard      | Get individual asset chart data       | ✅      |
+| 19  | `/uploadSqlFile`          | POST     | Backup/Restore | Upload SQLite backup file             | ❌      |
+| 20  | `/money.sqlite`           | GET      | Backup/Restore | Download SQLite database file         | ❌      |
 
 ---
 
@@ -106,9 +124,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves initial application data including categories, payment types, asset groups, and multi-book configuration.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `mbid` | string | No | Money book ID |
+
+| Parameter | Type   | Required | Description   |
+| --------- | ------ | -------- | ------------- |
+| `mbid`    | string | No       | Money book ID |
 
 **Response Format:** JSON
 
@@ -171,17 +190,18 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves transaction records for a specified date range.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
-| `mbid` | string | Yes | Money book ID |
-| `assetId` | string | No | Filter by specific asset ID |
+
+| Parameter   | Type   | Required | Description                 |
+| ----------- | ------ | -------- | --------------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD)     |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)       |
+| `mbid`      | string | Yes      | Money book ID               |
+| `assetId`   | string | No       | Filter by specific asset ID |
 
 **Response Format:** XML
 
 ```xml
-<data>
+<dataset>
   <results>count</results>
   <row>
     <id>string</id>
@@ -200,7 +220,7 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
     <inOutType>string</inOutType>
     <mbDetailContent>string</mbDetailContent>
   </row>
-</data>
+</dataset>
 ```
 
 **inOutCode Values:**
@@ -222,24 +242,25 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Creates a new transaction record.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `mbDate` | date | Yes | Transaction date (YYYY-MM-DD) |
-| `assetId` | string | Yes | Asset/Account ID |
-| `toAssetId` | string | No | Target asset ID (for transfers) |
-| `targetAssetId` | string | No | Target asset ID |
-| `payType` | string | Yes | Payment type name |
-| `mcid` | string | Yes | Category ID |
-| `mbCategory` | string | Yes | Category name |
-| `mcscid` | string | No | Subcategory ID |
-| `subCategory` | string | No | Subcategory name |
-| `mbContent` | string | No | Transaction description |
-| `mbCash` | float | Yes | Amount |
-| `inOutCode` | string | Yes | Transaction type code |
-| `inOutType` | string | Yes | Transaction type name |
-| `mbDetailContent` | string | No | Detailed notes |
 
-**Response Format:** JSON (success/failure indicator)
+| Parameter         | Type   | Required | Description                     |
+| ----------------- | ------ | -------- | ------------------------------- |
+| `mbDate`          | date   | Yes      | Transaction date (YYYY-MM-DD)   |
+| `assetId`         | string | Yes      | Asset/Account ID                |
+| `toAssetId`       | string | No       | Target asset ID (for transfers) |
+| `targetAssetId`   | string | No       | Target asset ID                 |
+| `payType`         | string | Yes      | Payment type name               |
+| `mcid`            | string | Yes      | Category ID                     |
+| `mbCategory`      | string | Yes      | Category name                   |
+| `mcscid`          | string | No       | Subcategory ID                  |
+| `subCategory`     | string | No       | Subcategory name                |
+| `mbContent`       | string | No       | Transaction description         |
+| `mbCash`          | float  | Yes      | Amount                          |
+| `inOutCode`       | string | Yes      | Transaction type code           |
+| `inOutType`       | string | Yes      | Transaction type name           |
+| `mbDetailContent` | string | No       | Detailed notes                  |
+
+**Response Format:** JSON (success/failure indicator; does **not** include the created transaction's ID — discover it via the transaction list)
 
 ---
 
@@ -250,9 +271,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Updates an existing transaction record.
 
 **Request Parameters:** Same as Create Transaction, plus:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | string | Yes | Transaction ID |
+
+| Parameter | Type   | Required | Description    |
+| --------- | ------ | -------- | -------------- |
+| `id`      | string | Yes      | Transaction ID |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -265,9 +287,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Deletes one or more transactions.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `ids` | string | Yes | Colon-separated list of transaction IDs (e.g., ":id1:id2:id3") |
+
+| Parameter | Type   | Required | Description                                                    |
+| --------- | ------ | -------- | -------------------------------------------------------------- |
+| `ids`     | string | Yes      | Colon-separated list of transaction IDs (e.g., ":id1:id2:id3") |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -280,10 +303,11 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves financial summary statistics for a date range.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
+
+| Parameter   | Type   | Required | Description             |
+| ----------- | ------ | -------- | ----------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD) |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)   |
 
 **Response Format:** JSON
 
@@ -325,13 +349,14 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Exports transaction data to Excel file format.
 
 **Request Parameters:** (Form submission)
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
-| `mbid` | string | Yes | Money book ID |
-| `assetId` | string | No | Filter by asset ID |
-| `inOutType` | string | No | Filter by income/expense type |
+
+| Parameter   | Type   | Required | Description                   |
+| ----------- | ------ | -------- | ----------------------------- |
+| `startDate` | string | Yes      | Start date (YYYY-MM-DD)       |
+| `endDate`   | string | Yes      | End date (YYYY-MM-DD)         |
+| `mbid`      | string | Yes      | Money book ID                 |
+| `assetId`   | string | No       | Filter by asset ID            |
+| `inOutType` | string | No       | Filter by income/expense type |
 
 **Response Format:** Excel file download (HTML-based .xls format)
 
@@ -412,16 +437,17 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Creates a new asset/account.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetGroupId` | string | Yes | Asset group ID |
-| `assetGroupName` | string | Yes | Asset group name |
-| `assetName` | string | Yes | Asset name |
-| `assetMoney` | number | Yes | Initial balance |
-| `linkAssetId` | string | No | Linked asset ID (for certain asset types) |
-| `linkAssetName` | string | No | Linked asset name |
 
-**Response Format:** JSON (success/failure indicator)
+| Parameter        | Type   | Required | Description                               |
+| ---------------- | ------ | -------- | ----------------------------------------- |
+| `assetGroupId`   | string | Yes      | Asset group ID                            |
+| `assetGroupName` | string | Yes      | Asset group name                          |
+| `assetName`      | string | Yes      | Asset name                                |
+| `assetMoney`     | number | Yes      | Initial balance                           |
+| `linkAssetId`    | string | No       | Linked asset ID (for certain asset types) |
+| `linkAssetName`  | string | No       | Linked asset name                         |
+
+**Response Format:** JSON (success/failure indicator; does **not** include the new asset's ID — discover it via the asset list)
 
 ---
 
@@ -432,15 +458,16 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Modifies an existing asset/account.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID |
-| `assetGroupId` | string | Yes | Asset group ID |
-| `assetGroupName` | string | Yes | Asset group name |
-| `assetName` | string | Yes | Asset name |
-| `assetMoney` | number | Yes | Current balance |
-| `linkAssetId` | string | No | Linked asset ID |
-| `linkAssetName` | string | No | Linked asset name |
+
+| Parameter        | Type   | Required | Description       |
+| ---------------- | ------ | -------- | ----------------- |
+| `assetId`        | string | Yes      | Asset ID          |
+| `assetGroupId`   | string | Yes      | Asset group ID    |
+| `assetGroupName` | string | Yes      | Asset group name  |
+| `assetName`      | string | Yes      | Asset name        |
+| `assetMoney`     | number | Yes      | Current balance   |
+| `linkAssetId`    | string | No       | Linked asset ID   |
+| `linkAssetName`  | string | No       | Linked asset name |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -453,9 +480,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Removes an asset/account.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID to remove |
+
+| Parameter | Type   | Required | Description        |
+| --------- | ------ | -------- | ------------------ |
+| `assetId` | string | Yes      | Asset ID to remove |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -468,16 +496,19 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Creates a new credit card.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `cardName` | string | Yes | Credit card name |
-| `linkAssetId` | string | Yes | Linked payment asset ID |
-| `linkAssetName` | string | Yes | Linked payment asset name |
-| `notPayMoney` | number | Yes | Unpaid balance (negative value) |
-| `jungsanDay` | number | No | Balance calculation day (1-31) |
-| `paymentDay` | number | No | Payment due day (1-31) |
 
-**Response Format:** JSON (success/failure indicator)
+| Parameter       | Type   | Required                  | Description                     |
+| --------------- | ------ | ------------------------- | ------------------------------- |
+| `cardName`      | string | Yes                       | Credit card name                |
+| `linkAssetId`   | string | Yes                       | Linked payment asset ID         |
+| `linkAssetName` | string | Yes                       | Linked payment asset name       |
+| `notPayMoney`   | number | Yes                       | Unpaid balance (negative value) |
+| `jungsanDay`    | number | Yes (in practice)         | Balance calculation day (1-31)  |
+| `paymentDay`    | number | Yes (in practice)         | Payment due day (1-31)          |
+
+> ⚠️ **Verified against a live server:** the request **hangs indefinitely** (no response, no card created) when either `jungsanDay` or `paymentDay` is omitted. Always send both fields. The MCP server's `card_create` tool defaults them to `1`.
+
+**Response Format:** JSON (success/failure indicator; does **not** include the new card's ID — discover it via the card list)
 
 ---
 
@@ -488,14 +519,17 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Modifies an existing credit card.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Card asset ID |
-| `cardName` | string | Yes | Credit card name |
-| `linkAssetId` | string | Yes | Linked payment asset ID |
-| `linkAssetName` | string | Yes | Linked payment asset name |
-| `jungsanDay` | number | No | Balance calculation day (1-31) |
-| `paymentDay` | number | No | Payment due day (1-31) |
+
+| Parameter       | Type   | Required | Description                    |
+| --------------- | ------ | -------- | ------------------------------ |
+| `assetId`       | string | Yes      | Card asset ID                  |
+| `cardName`      | string | Yes      | Credit card name               |
+| `linkAssetId`   | string | Yes      | Linked payment asset ID        |
+| `linkAssetName` | string | Yes      | Linked payment asset name      |
+| `jungsanDay`    | number | No       | Balance calculation day (1-31) |
+| `paymentDay`    | number | No       | Payment due day (1-31)         |
+
+> ⚠️ **Verified against a live server:** this endpoint **resets fields that are not re-sent** rather than preserving them. Omitting `linkAssetId`/`linkAssetName` clears the link (`"0"`), omitting `paymentDay` empties it (`"null"`), and omitting `jungsanDay` resets it to `1`. Unlike `addAssetCard`, it responds quickly regardless. Always send the complete field set; the MCP server's `card_update` tool fills omitted days from the card's current state.
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -508,18 +542,19 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Transfers money between two assets.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `moveDate` | date | Yes | Transfer date (YYYY-MM-DD) |
-| `fromAssetId` | string | Yes | Source asset ID |
-| `fromAssetName` | string | Yes | Source asset name |
-| `toAssetId` | string | Yes | Destination asset ID |
-| `toAssetName` | string | Yes | Destination asset name |
-| `moveMoney` | number | Yes | Transfer amount |
-| `moneyContent` | string | No | Transfer description |
-| `mbDetailContent` | string | No | Detailed notes |
 
-**Response Format:** JSON (success/failure indicator)
+| Parameter         | Type   | Required | Description                |
+| ----------------- | ------ | -------- | -------------------------- |
+| `moveDate`        | date   | Yes      | Transfer date (YYYY-MM-DD) |
+| `fromAssetId`     | string | Yes      | Source asset ID            |
+| `fromAssetName`   | string | Yes      | Source asset name          |
+| `toAssetId`       | string | Yes      | Destination asset ID       |
+| `toAssetName`     | string | Yes      | Destination asset name     |
+| `moveMoney`       | number | Yes      | Transfer amount            |
+| `moneyContent`    | string | No       | Transfer description       |
+| `mbDetailContent` | string | No       | Detailed notes             |
+
+**Response Format:** JSON (success/failure indicator; does **not** include the new transfer's ID — discover it via the transaction list, looking for the Transfer-Out row on the source asset)
 
 ---
 
@@ -529,10 +564,13 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 
 **Description:** Modifies an existing asset transfer.
 
+> ⚠️ Does **not** update in place: the server creates a **new** transfer with a **new** ID and the old ID becomes invalid. Verify the new ID via the transaction list afterward.
+
 **Request Parameters:** Same as Transfer Between Assets, plus:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | string | Yes | Transfer transaction ID |
+
+| Parameter | Type   | Required | Description             |
+| --------- | ------ | -------- | ----------------------- |
+| `id`      | string | Yes      | Transfer transaction ID |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -585,9 +623,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Retrieves historical chart data for a specific asset.
 
 **Request Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `assetId` | string | Yes | Asset ID |
+
+| Parameter | Type   | Required | Description |
+| --------- | ------ | -------- | ----------- |
+| `assetId` | string | Yes      | Asset ID    |
 
 **Response Format:** JSON
 
@@ -611,9 +650,10 @@ Where `MONEY_MANAGER_BASE_URL` is your Money Manager server address (e.g., `http
 **Description:** Uploads a SQLite database file for data restoration.
 
 **Request Parameters:** (Multipart form data)
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `file` | file | Yes | SQLite database file (money.sqlite) |
+
+| Parameter | Type | Required | Description                         |
+| --------- | ---- | -------- | ----------------------------------- |
+| `file`    | file | Yes      | SQLite database file (money.sqlite) |
 
 **Response Format:** JSON (success/failure indicator)
 
@@ -699,7 +739,7 @@ The API uses standard HTTP status codes:
 
 ## Notes
 
-1. **Date Format:** All dates use the format `YYYY-MM-DD`
+1. **Date Format:** All dates use the format `YYYY-MM-DD`. Time components are silently dropped — the app records the transaction at 12:00 AM
 2. **Number Format:** Currency values are typically formatted with two decimal places
 3. **Session Management:** Session cookies are automatically managed by the HTTP client
-4. **Response Parsing:** Some endpoints return XML (transaction list), while others return JSON
+4. **Response Parsing:** The transaction list returns XML; every other endpoint returns JavaScript object-literal syntax (not strict JSON), which the MCP server's HTTP client normalizes

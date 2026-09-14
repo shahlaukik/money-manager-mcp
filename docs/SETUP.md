@@ -4,7 +4,7 @@ This guide covers installation and configuration of the Money Manager MCP server
 
 ## Prerequisites
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 22.13.0
 - **npm** >= 9.0.0
 - **Realbyte Money Manager** app with web server enabled
 - Your phone and computer on the **same Wi-Fi network**
@@ -64,7 +64,8 @@ MONEY_MANAGER_BASE_URL=http://your-server-ip:port
 # Optional: Request timeout in milliseconds (default: 30000)
 MONEY_MANAGER_TIMEOUT=30000
 
-# Optional: Maximum retry attempts for failed requests (default: 3)
+# Optional: Maximum retry attempts for failed read requests (default: 3).
+# Writes are never retried, so a timed-out write cannot be applied twice.
 MONEY_MANAGER_RETRY_COUNT=3
 
 # Optional: Log level (debug|info|warn|error) (default: info)
@@ -80,21 +81,46 @@ The server reads configuration in this order (highest priority first):
 
 1. **Command line arguments** (`--baseUrl`)
 2. **Environment variables** (`MONEY_MANAGER_BASE_URL`)
-3. **Configuration file** (`money-manager-config.json`)
+3. **Configuration file** (`.money-manager-mcp.json`)
+4. **Schema defaults**
 
 ### Configuration File (Alternative)
 
-You can also use a `money-manager-config.json` file:
+You can also use a `.money-manager-mcp.json` file in your working directory. Any subset of keys can be provided — unspecified keys fall back to the defaults shown below:
 
 ```json
 {
-  "baseUrl": "http://your-server-ip:port",
-  "timeout": 30000,
-  "retryCount": 3,
-  "logLevel": "info",
-  "sessionPersist": true
+  "server": {
+    "baseUrl": "http://your-server-ip:port",
+    "timeout": 30000,
+    "retryCount": 3,
+    "retryDelay": 1000
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  },
+  "session": {
+    "persist": true,
+    "cookieFile": ".session-cookies.json"
+  }
 }
 ```
+
+| Key                  | Default                 | Description                                                              |
+| -------------------- | ----------------------- | ------------------------------------------------------------------------ |
+| `server.baseUrl`     | — (required)            | Money Manager server address (`http://` or `https://`)                   |
+| `server.timeout`     | `30000`                 | Request timeout in milliseconds (1000–120000)                            |
+| `server.retryCount`  | `3`                     | Retry attempts for failed read requests (0–10); writes are never retried |
+| `server.retryDelay`  | `1000`                  | Base delay in milliseconds for the exponential-backoff retry             |
+| `logging.level`      | `info`                  | `debug` \| `info` \| `warn` \| `error`                                   |
+| `logging.format`     | `json`                  | Log line format written to stderr: `json` or `text`                      |
+| `session.persist`    | `true`                  | Persist session cookies across restarts                                  |
+| `session.cookieFile` | `.session-cookies.json` | Cookie file path, relative to the working directory                      |
+
+> `retryDelay`, `logging.format`, and `session.cookieFile` can only be set through the config file (there are no environment variables for them).
+
+When session persistence is enabled, the server saves its session cookies to the configured cookie file in the working directory so it can reuse the login across restarts. The file is gitignored and created only after the first successful request.
 
 ## MCP Client Setup
 
@@ -284,10 +310,10 @@ Should complete without errors.
 ### 2. Test the Server Starts
 
 ```bash
-npm start
+npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
 ```
 
-The server should start without errors. It will wait for MCP client connections via stdio.
+The server should start and log its base URL to stderr. It then waits for an MCP client connection via stdio (there is no HTTP port). The `--baseUrl` value must point at your running Money Manager web server.
 
 ### 3. Test MCP Connection
 
@@ -330,6 +356,16 @@ The Money Manager app runs on your local network. Common ways to find it:
 - Try restarting the MCP server
 - Check `MONEY_MANAGER_SESSION_PERSIST` is set to `true`
 
+#### "outputPath must end in .xls or .xlsx (other extensions are not allowed)"
+
+- Excel exports must use a `.xls` or `.xlsx` extension, so the export cannot overwrite unrelated files inside the working directory
+- `.xlsx` paths are auto-corrected to `.xls` (the server returns an HTML-based Excel format)
+
+#### "outputPath must be a relative path inside the working directory"
+
+- Excel exports can only be written inside the server's working directory
+- Use a relative `.xls`/`.xlsx` path (e.g. `exports/november.xls`) — absolute paths, `..` traversal, and symlinks pointing outside are rejected
+
 #### "Tool not found" in AI client
 
 - Ensure the MCP server is properly configured
@@ -338,7 +374,7 @@ The Money Manager app runs on your local network. Common ways to find it:
 
 #### Build errors
 
-- Ensure Node.js >= 18 is installed: `node --version`
+- Ensure Node.js >= 22.13 is installed: `node --version`
 - Run `npm install` to ensure all dependencies are present
 - Check for TypeScript errors: `npm run build`
 
@@ -347,7 +383,7 @@ The Money Manager app runs on your local network. Common ways to find it:
 For verbose logging, set the log level to debug:
 
 ```bash
-MONEY_MANAGER_LOG_LEVEL=debug npm start
+MONEY_MANAGER_LOG_LEVEL=debug npm start -- --baseUrl http://YOUR_PHONE_IP:PORT
 ```
 
 Or in your environment configuration:
@@ -364,4 +400,4 @@ Or in your environment configuration:
 ## Next Steps
 
 - See [USAGE.md](./USAGE.md) for tool descriptions and examples
-- See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup
+- See [CONTRIBUTING.md](../CONTRIBUTING.md) for development setup

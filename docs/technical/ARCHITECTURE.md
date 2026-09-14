@@ -12,7 +12,7 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 **Rationale:**
 
-- First-class MCP SDK support with `@modelcontextprotocol/sdk`
+- Built on [FastMCP](https://github.com/punkpeye/fastmcp), an opinionated MCP server framework on top of the official SDK
 - Strong typing for API request/response schemas
 - Better IDE support and developer experience
 - Native JSON handling for API responses
@@ -20,23 +20,24 @@ This document describes the architecture of the Money Manager MCP (Model Context
 
 ### Core Dependencies
 
-| Package                     | Purpose                                     |
-| --------------------------- | ------------------------------------------- |
-| `@modelcontextprotocol/sdk` | MCP server implementation                   |
-| `axios`                     | HTTP client for API calls                   |
-| `zod`                       | Runtime schema validation                   |
-| `dotenv`                    | Environment variable management             |
-| `xml2js`                    | XML response parsing (for transaction list) |
-| `tough-cookie`              | Cookie/session management                   |
-| `axios-cookiejar-support`   | Cookie jar integration with axios           |
+| Package                   | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| `fastmcp`                 | MCP server framework (transport, dispatch, schema) |
+| `axios`                   | HTTP client for API calls                          |
+| `zod`                     | Input schema validation (also drives tool schemas) |
+| `xml2js`                  | XML response parsing (for transaction list)        |
+| `tough-cookie`            | Cookie/session management                          |
+| `axios-cookiejar-support` | Cookie jar integration with axios                  |
 
 ### Development Dependencies
 
-| Package       | Purpose                  |
-| ------------- | ------------------------ |
-| `typescript`  | TypeScript compiler      |
-| `@types/node` | Node.js type definitions |
-| `tsx`         | TypeScript execution     |
+| Package       | Purpose                                            |
+| ------------- | -------------------------------------------------- |
+| `typescript`  | TypeScript compiler                                |
+| `@types/node` | Node.js type definitions                           |
+| `tsx`         | TypeScript execution (dev mode)                    |
+| `eslint`      | Linter (with `typescript-eslint` type-aware rules) |
+| `prettier`    | Code formatter                                     |
 
 ---
 
@@ -47,7 +48,8 @@ money-manager-mcp/
 ├── src/
 │   ├── index.ts              # MCP server entry point
 │   ├── client/
-│   │   └── http-client.ts    # HTTP client with session management
+│   │   ├── http-client.ts    # HTTP client with session management
+│   │   └── identifiers.ts    # character classifiers for JS-literal parsing
 │   ├── config/
 │   │   └── index.ts          # Configuration loader
 │   ├── errors/
@@ -63,11 +65,14 @@ money-manager-mcp/
 │   │   ├── API_DOCUMENTATION.md
 │   │   └── ARCHITECTURE.md
 │   ├── SETUP.md
-│   ├── USAGE.md
-│   └── CONTRIBUTING.md
+│   └── USAGE.md
 ├── dist/                     # Compiled JavaScript output
+├── .agents/skills/           # Repo-local agent skills (live end-to-end test protocol)
 ├── .env.example              # Example environment variables
 ├── .gitignore
+├── AGENTS.md                 # Guidance for AI coding agents
+├── CONTRIBUTING.md
+├── eslint.config.mjs
 ├── LICENSE
 ├── package.json
 ├── tsconfig.json
@@ -115,6 +120,18 @@ Tools follow the pattern: `{category}_{action}` using snake_case.
 | 17  | `dashboard_get_overview`    | `/getDashBoardData`       | GET    |
 | 18  | `dashboard_get_asset_chart` | `/getEachAssetChartData`  | POST   |
 
+### Tool Registration
+
+Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the `TOOLS` array, binding together its name, description, Zod input schema, and handler. FastMCP uses the Zod schema to:
+
+1. Auto-generate the JSON Schema advertised to clients via `tools/list`
+2. Validate inputs before the handler runs
+3. Dispatch `tools/call` to the right handler
+
+`src/index.ts` is a thin bootstrap: it creates the `FastMCP` server, binds the HTTP client to each handler via closure, wraps each handler's domain-object result as JSON text content, and starts the stdio transport. There is no hand-maintained JSON Schema list and no double validation.
+
+The server also sends an `instructions` block in the MCP initialize handshake. Because end users install via `npx money-manager-mcp@latest` and never see this repository's docs, those instructions carry the critical usage contract: call `init_get_data` first (IDs are not guessable), create tools do not return new IDs, `transfer_update` does not update in place, there is no `card_delete`, and `transaction_list` can hang on empty date ranges.
+
 ---
 
 ## 4. Key Implementation Details
@@ -124,10 +141,11 @@ Tools follow the pattern: `{category}_{action}` using snake_case.
 The HTTP client (`src/client/http-client.ts`) handles:
 
 - **Session Management**: Maintains cookies across requests using `tough-cookie`
-- **Cookie Persistence**: Optionally saves/loads session cookies to `.session-cookies.json`
-- **Retry Logic**: Configurable retry attempts for failed requests
+- **Cookie Persistence**: Optionally saves/loads session cookies to `.session-cookies.json` (written with owner-only permissions; unchanged state is never rewritten)
+- **Retry Logic**: Configurable, exponential-backoff retry for failed **read** requests only — a timed-out write may already have been applied upstream, so POSTs run single-shot to avoid duplicating a financial write
 - **Timeout Handling**: Configurable request timeouts
-- **Response Parsing**: Handles both JSON and XML responses
+- **Response Size Cap**: Responses over 25 MiB are rejected (legitimate responses are far smaller)
+- **Response Parsing**: Handles JavaScript object literals and XML responses
 
 ### 4.2 JavaScript Literal Parsing
 
@@ -156,14 +174,14 @@ A key challenge was parsing the `getInitData` response, which returns JavaScript
 Transaction list responses come in XML format:
 
 ```xml
-<data>
+<dataset>
   <results>2</results>
   <row>
     <id>txn_001</id>
     <mbDate>2025-01-15</mbDate>
     ...
   </row>
-</data>
+</dataset>
 ```
 
 The server uses `xml2js` to parse and transform this to structured JSON.
@@ -180,51 +198,56 @@ The Money Manager API returns HTML-based `.xls` files (not true XLSX format). Th
 
 ## 5. Error Handling
 
-### Error Categories
+### Error Classes
 
-```typescript
-enum ErrorCategory {
-  NETWORK = "NETWORK", // Connection failures, timeouts
-  API = "API", // API returned error response
-  VALIDATION = "VALIDATION", // Input validation failures
-  SESSION = "SESSION", // Authentication/session issues
-  FILE = "FILE", // File system errors
-  INTERNAL = "INTERNAL", // Unexpected errors
-}
-```
+| Class          | Meaning                                | Retryable        |
+| -------------- | -------------------------------------- | ---------------- |
+| `NetworkError` | Connection failures, timeouts          | Yes (by default) |
+| `APIError`     | Server returned an error HTTP status   | On 5xx           |
+| `SessionError` | Authentication/session issues          | Never            |
+| `FileError`    | File system errors (exports)           | Never            |
+| `McpError`     | Base class; internal/unexpected errors | Never            |
 
-### Error Response Structure
+### Error Surfacing
 
-```typescript
-interface McpError {
-  code: string; // Error code (e.g., "NETWORK_TIMEOUT")
-  category: ErrorCategory; // Error category
-  message: string; // Human-readable message
-  details?: Record<string, any>; // Additional context
-  retryable: boolean; // Whether retry might succeed
-}
-```
+Handlers throw `McpError` subclasses (`NetworkError`, `APIError`, etc.). FastMCP catches these and returns them to the client as native MCP tool results with `isError: true`. The message is the only client-facing payload — anything the client should see (e.g. the `transaction_list` timeout hint) is part of the message — while the `retryable` flag drives the HTTP client's retry decisions internally.
+
+Successful results are returned as a single text content block containing the JSON-serialized domain object (e.g. `{ count, transactions }`).
 
 ---
 
 ## 6. Configuration
 
+Configuration is defined by a single Zod schema (`src/config/index.ts`), which is also the source of truth for defaults. The `--baseUrl` CLI flag is the primary way to set the server address.
+
 ### Environment Variables
 
 | Variable                        | Required | Default | Description          |
 | ------------------------------- | -------- | ------- | -------------------- |
-| `MONEY_MANAGER_BASE_URL`        | Yes      | -       | Server URL           |
+| `MONEY_MANAGER_BASE_URL`        | No\*     | -       | Server URL           |
 | `MONEY_MANAGER_TIMEOUT`         | No       | 30000   | Request timeout (ms) |
 | `MONEY_MANAGER_RETRY_COUNT`     | No       | 3       | Retry attempts       |
 | `MONEY_MANAGER_LOG_LEVEL`       | No       | info    | Log level            |
 | `MONEY_MANAGER_SESSION_PERSIST` | No       | true    | Persist cookies      |
 
+\* Either `--baseUrl` or `MONEY_MANAGER_BASE_URL` must be provided.
+
+A few settings have no environment variable and can only be set through the config file: `server.retryDelay` (base delay for the exponential-backoff retry, default 1000 ms), `logging.format` (`json` or `text`, default `json`), and `session.cookieFile` (default `.session-cookies.json`). The full key reference is in [SETUP.md](../SETUP.md).
+
+### Configuration Priority
+
+Highest priority first:
+
+1. **CLI argument** — `--baseUrl http://192.168.1.1:8888`
+2. **Environment variables** — `MONEY_MANAGER_*`
+3. **Config file** — `.money-manager-mcp.json` in the working directory
+4. **Schema defaults**
+
 ### Configuration Loading
 
-1. Load `.env` file if present
-2. Read environment variables
-3. Apply defaults for missing values
-4. Validate with Zod schema
+1. Load `.env` file if present (via Node's built-in `process.loadEnvFile`)
+2. Merge file config + env config + CLI override
+3. Validate with the Zod schema, which fills in defaults
 
 ---
 
@@ -233,15 +256,16 @@ interface McpError {
 ### Implemented Security Measures
 
 1. **No Credential Storage**: API uses session cookies only
-2. **Cookie Persistence**: Session cookies stored locally (excluded from git)
+2. **Cookie Persistence**: Session cookies stored locally with owner-only file permissions (excluded from git)
 3. **Input Validation**: All tool inputs validated with Zod schemas
+4. **Export Confinement**: `summary_export_excel`'s `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the server's working directory — other extensions, absolute paths, `..` traversal, and symlinks (including dangling ones) pointing outside it are rejected during input validation and re-checked immediately before the file is written. The write goes through an exclusive temp file and an atomic rename, so a symlink planted between validation and write is replaced rather than followed
+5. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
 
 ### Files Excluded from Repository
 
 - `.env` - Environment configuration
 - `.session-cookies.json` - Session data
 - `*.xls`, `*.xlsx` - Exported financial data
-- `*.sqlite` - Database backups
 
 ---
 
@@ -252,19 +276,19 @@ interface McpError {
 │   AI Assistant  │
 │ (Claude/Copilot)│
 └────────┬────────┘
-         │ MCP Protocol
+         │ MCP Protocol (stdio)
          ▼
 ┌─────────────────┐
-│  MCP Server     │
-│ (money-manager) │
+│  FastMCP Server │
+│  (index.ts)     │
 └────────┬────────┘
-         │ Tool Invocation
+         │ validates args, dispatches
          ▼
 ┌─────────────────┐
 │  Tool Handler   │
-│   (handlers.ts) │
+│ (handlers.ts)   │
 └────────┬────────┘
-         │ Validated Input
+         │ builds request
          ▼
 ┌─────────────────┐
 │  HTTP Client    │
@@ -302,7 +326,7 @@ interface Transaction {
 // Asset
 interface Asset {
   assetId: string;
-  assetGroupId: string;
+  assetGroupId?: string;
   assetType: "group" | "item";
   assetName: string;
   assetMoney: number;
@@ -321,13 +345,15 @@ interface Category {
 
 ## 10. Testing
 
-### Manual Testing
+There is no automated test suite. The server is verified by:
 
-The server can be tested by:
+1. `npm run build` — TypeScript strict compilation (the primary gate)
+2. `npm run lint` — ESLint
+3. Manual testing with an MCP-compatible client (Claude Desktop, VS Code)
 
-1. Running the built server with proper configuration
-2. Using an MCP-compatible client (Claude Desktop, VS Code)
-3. Invoking tools and verifying responses
+For a full live end-to-end protocol — all 18 tools exercised with throwaway data and guaranteed cleanup — follow the `testing-money-manager-mcp` skill in `.agents/skills/testing-money-manager-mcp/SKILL.md`.
+
+Handlers are pure `(client, args) → object` functions, so they can be unit-tested against a mocked `HttpClient` without a live server, but no such tests are included.
 
 ### Debug Mode
 
@@ -336,15 +362,3 @@ Set `MONEY_MANAGER_LOG_LEVEL=debug` for verbose logging:
 ```bash
 MONEY_MANAGER_LOG_LEVEL=debug node dist/index.js
 ```
-
----
-
-## 11. Future Enhancements
-
-Potential improvements for future versions:
-
-1. **MCP Resources**: Expose assets and categories as browsable resources
-2. **MCP Prompts**: Pre-built prompts for common financial queries
-3. **Caching**: Cache initialization data for faster subsequent calls
-4. **Batch Operations**: Support bulk transaction creation
-5. **Unit Tests**: Comprehensive test suite with mocked responses

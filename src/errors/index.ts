@@ -1,161 +1,73 @@
 /**
- * Error categories for the Money Manager MCP server
+ * Error taxonomy for the Money Manager MCP server.
+ *
+ * Handlers and the HTTP client throw these subclasses; FastMCP catches them and
+ * surfaces them to the client as native MCP tool results with `isError: true`.
+ * The message is the only client-facing payload — anything the client should
+ * see (guidance, causes) must be part of it. The `retryable` flag drives the
+ * HTTP client's retry decisions.
  */
-export enum ErrorCategory {
-  NETWORK = "NETWORK",
-  API = "API",
-  VALIDATION = "VALIDATION",
-  SESSION = "SESSION",
-  FILE = "FILE",
-  INTERNAL = "INTERNAL",
-}
 
-/**
- * Base error interface for MCP errors
- */
-export interface McpErrorDetails {
-  code: string;
-  category: ErrorCategory;
-  message: string;
-  details?: Record<string, unknown>;
-  retryable: boolean;
-}
-
-/**
- * Base class for all Money Manager MCP errors
- */
-export class McpError extends Error implements McpErrorDetails {
-  public readonly code: string;
-  public readonly category: ErrorCategory;
-  public readonly details?: Record<string, unknown>;
+/** Base class for all Money Manager errors. */
+export class McpError extends Error {
   public readonly retryable: boolean;
 
-  constructor(
-    code: string,
-    category: ErrorCategory,
-    message: string,
-    retryable: boolean = false,
-    details?: Record<string, unknown>,
-  ) {
+  constructor(message: string, retryable = false) {
     super(message);
     this.name = "McpError";
-    this.code = code;
-    this.category = category;
     this.retryable = retryable;
-    this.details = details;
-
-    // Maintains proper stack trace for where error was thrown (V8 engines)
-    const ErrorWithCapture = Error as typeof Error & {
-      captureStackTrace?: (
-        targetObject: object,
-        constructorOpt?: (...args: unknown[]) => unknown,
-      ) => void;
-    };
-    if (ErrorWithCapture.captureStackTrace) {
-      ErrorWithCapture.captureStackTrace(this, McpError);
-    }
-  }
-
-  /**
-   * Converts the error to a JSON-serializable object
-   */
-  toJSON(): McpErrorDetails {
-    return {
-      code: this.code,
-      category: this.category,
-      message: this.message,
-      details: this.details,
-      retryable: this.retryable,
-    };
   }
 }
 
-/**
- * Network-related errors (connection failures, timeouts)
- */
+/** Network-related errors (connection failures, timeouts). Retryable by default. */
 export class NetworkError extends McpError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super("NETWORK_ERROR", ErrorCategory.NETWORK, message, true, details);
+  constructor(message: string, retryable = true) {
+    super(message, retryable);
     this.name = "NetworkError";
   }
 
-  static timeout(url: string, timeoutMs: number, hint?: string): NetworkError {
-    const message = `Request to ${url} timed out after ${timeoutMs}ms`;
-    return new NetworkError(message, {
-      url,
-      timeoutMs,
-      errorType: "TIMEOUT",
-      hint,
-    });
+  static timeout(url: string, timeoutMs: number): NetworkError {
+    return new NetworkError(`Request to ${url} timed out after ${timeoutMs}ms`);
   }
 
   /**
-   * Creates a timeout error with a specific hint for transaction_list queries
+   * Timeout error with a message specific to transaction_list: the Money Manager
+   * server has a known bug where it hangs on date ranges with no transactions,
+   * so the guidance is folded into the message the client actually sees.
+   * Marked non-retryable — the hang never clears on retry, so each attempt
+   * would just burn another full timeout before the client sees the hint.
    */
   static timeoutForTransactionList(
     url: string,
     timeoutMs: number,
   ): NetworkError {
-    return NetworkError.timeout(
-      url,
-      timeoutMs,
-      "Note: The Money Manager server may hang when querying date ranges with no transactions. " +
-        "This is a known server-side limitation. Try a date range that has recorded transactions.",
+    return new NetworkError(
+      `Request to ${url} timed out after ${timeoutMs}ms. The Money Manager ` +
+        "server may hang when querying date ranges with no transactions — " +
+        "try a date range that has recorded transactions.",
+      false,
     );
   }
 
   static connectionRefused(url: string): NetworkError {
-    return new NetworkError(`Connection refused to ${url}`, {
-      url,
-      errorType: "CONNECTION_REFUSED",
-    });
+    return new NetworkError(`Connection refused to ${url}`);
   }
 
   static unreachable(url: string, originalError?: string): NetworkError {
     return new NetworkError(
-      `Cannot connect to Money Manager server at ${url}`,
-      {
-        url,
-        originalError,
-        errorType: "UNREACHABLE",
-      },
+      originalError
+        ? `Cannot connect to Money Manager server at ${url} (${originalError})`
+        : `Cannot connect to Money Manager server at ${url}`,
     );
   }
 }
 
-/**
- * API-related errors (server returned an error response)
- */
+/** API errors (server returned an error HTTP response). Retryable on 5xx. */
 export class APIError extends McpError {
-  public readonly statusCode?: number;
-
-  constructor(
-    message: string,
-    statusCode?: number,
-    details?: Record<string, unknown>,
-  ) {
+  constructor(message: string, statusCode?: number) {
     const retryable = statusCode !== undefined && statusCode >= 500;
-    super("API_ERROR", ErrorCategory.API, message, retryable, {
-      ...details,
-      statusCode,
-    });
+    super(message, retryable);
     this.name = "APIError";
-    this.statusCode = statusCode;
-  }
-
-  static notFound(resource: string, id?: string): APIError {
-    const message = id
-      ? `${resource} with ID '${id}' not found`
-      : `${resource} not found`;
-    return new APIError(message, 404, { resource, id });
-  }
-
-  static serverError(message: string, statusCode: number = 500): APIError {
-    return new APIError(`Server error: ${message}`, statusCode);
-  }
-
-  static badRequest(message: string): APIError {
-    return new APIError(`Bad request: ${message}`, 400);
   }
 
   static fromStatusCode(statusCode: number, message?: string): APIError {
@@ -168,103 +80,21 @@ export class APIError extends McpError {
       502: "Bad Gateway",
       503: "Service Unavailable",
     };
-
-    const errorMessage =
-      message ?? defaultMessages[statusCode] ?? "Unknown Error";
-    return new APIError(errorMessage, statusCode);
-  }
-}
-
-/**
- * Validation errors (input validation failures)
- */
-export class ValidationError extends McpError {
-  public readonly field?: string;
-  public readonly expected?: string;
-  public readonly received?: unknown;
-
-  constructor(
-    message: string,
-    field?: string,
-    expected?: string,
-    received?: unknown,
-  ) {
-    super("VALIDATION_ERROR", ErrorCategory.VALIDATION, message, false, {
-      field,
-      expected,
-      received,
-    });
-    this.name = "ValidationError";
-    this.field = field;
-    this.expected = expected;
-    this.received = received;
-  }
-
-  static invalidField(
-    field: string,
-    expected: string,
-    received: unknown,
-  ): ValidationError {
-    return new ValidationError(
-      `Invalid value for '${field}': expected ${expected}, received ${JSON.stringify(received)}`,
-      field,
-      expected,
-      received,
-    );
-  }
-
-  static requiredField(field: string): ValidationError {
-    return new ValidationError(
-      `Required field '${field}' is missing`,
-      field,
-      "required",
-      undefined,
-    );
-  }
-
-  static invalidFormat(
-    field: string,
-    format: string,
-    value: string,
-  ): ValidationError {
-    return new ValidationError(
-      `Invalid format for '${field}': expected ${format}`,
-      field,
-      format,
-      value,
-    );
-  }
-
-  static fromZodError(zodError: {
-    errors: Array<{ path: (string | number)[]; message: string }>;
-  }): ValidationError {
-    const firstError = zodError.errors[0];
-    if (!firstError) {
-      return new ValidationError("Validation failed");
-    }
-    const field = firstError.path.join(".");
-    return new ValidationError(
-      `Validation failed for '${field}': ${firstError.message}`,
-      field,
+    return new APIError(
+      message ?? defaultMessages[statusCode] ?? "Unknown Error",
+      statusCode,
     );
   }
 }
 
 /**
- * Session-related errors (authentication issues)
+ * Session errors (authentication / authorization). Not retryable — resending
+ * the same request with the same session cookies cannot fix a 401/403.
  */
 export class SessionError extends McpError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super("SESSION_ERROR", ErrorCategory.SESSION, message, true, details);
+  constructor(message: string) {
+    super(message, false);
     this.name = "SessionError";
-  }
-
-  static expired(): SessionError {
-    return new SessionError("Session has expired. Please reconnect.");
-  }
-
-  static invalid(): SessionError {
-    return new SessionError("Invalid session. Please reconnect.");
   }
 
   static unauthorized(): SessionError {
@@ -274,93 +104,33 @@ export class SessionError extends McpError {
   }
 }
 
-/**
- * File system errors (backup/export operations)
- */
+/** File system errors (export operations). Not retryable. */
 export class FileError extends McpError {
-  public readonly filePath?: string;
-
-  constructor(
-    message: string,
-    filePath?: string,
-    details?: Record<string, unknown>,
-  ) {
-    super("FILE_ERROR", ErrorCategory.FILE, message, false, {
-      ...details,
-      filePath,
-    });
+  constructor(message: string) {
+    super(message, false);
     this.name = "FileError";
-    this.filePath = filePath;
   }
 
-  static readFailed(filePath: string, originalError?: string): FileError {
-    return new FileError(`Cannot read file at '${filePath}'`, filePath, {
-      originalError,
-      operation: "read",
-    });
-  }
-
-  static writeFailed(filePath: string, originalError?: string): FileError {
-    return new FileError(`Cannot write file to '${filePath}'`, filePath, {
-      originalError,
-      operation: "write",
-    });
-  }
-
-  static notFound(filePath: string): FileError {
-    return new FileError(`File not found: '${filePath}'`, filePath, {
-      operation: "access",
-    });
-  }
-
-  static permissionDenied(filePath: string): FileError {
+  static writeFailed(filePath: string, originalError: string): FileError {
     return new FileError(
-      `Permission denied for file: '${filePath}'`,
-      filePath,
-      {
-        operation: "access",
-      },
+      `Cannot write file to '${filePath}': ${originalError}`,
     );
   }
 }
 
-/**
- * Internal errors (unexpected errors)
- */
-export class InternalError extends McpError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super("INTERNAL_ERROR", ErrorCategory.INTERNAL, message, false, details);
-    this.name = "InternalError";
-  }
-
-  static unexpected(originalError?: Error): InternalError {
-    return new InternalError(
-      "An unexpected error occurred",
-      originalError
-        ? {
-            originalError: originalError.message,
-            stack: originalError.stack,
-          }
-        : undefined,
-    );
-  }
-
-  static notImplemented(feature: string): InternalError {
-    return new InternalError(`Feature '${feature}' is not implemented`, {
-      feature,
-    });
-  }
-}
-
-/**
- * Type guard to check if an error is an McpError
- */
+/** Type guard: is the value an McpError? */
 export function isMcpError(error: unknown): error is McpError {
   return error instanceof McpError;
 }
 
 /**
- * Wraps an unknown error into an appropriate McpError
+ * Normalizes an unknown error into an McpError.
+ * - McpError instances pass through unchanged.
+ * - Errors carrying a network errno become retryable NetworkErrors. Axios
+ *   errors are already mapped by the response interceptor before they reach
+ *   this; the errno check covers raw Node errors that bypassed axios.
+ * - Anything else becomes a non-retryable internal error whose message
+ *   includes the original cause (the message is all a client ever sees).
  */
 export function wrapError(error: unknown): McpError {
   if (isMcpError(error)) {
@@ -368,23 +138,17 @@ export function wrapError(error: unknown): McpError {
   }
 
   if (error instanceof Error) {
-    // Check for common network error codes
-    const errorWithCode = error as Error & { code?: string };
-    if (errorWithCode.code === "ECONNREFUSED") {
-      return NetworkError.connectionRefused("unknown");
-    }
+    const code = (error as Error & { code?: string }).code;
     if (
-      errorWithCode.code === "ETIMEDOUT" ||
-      errorWithCode.code === "ECONNABORTED"
+      code === "ECONNREFUSED" ||
+      code === "ETIMEDOUT" ||
+      code === "ECONNABORTED" ||
+      code === "ENOTFOUND"
     ) {
-      return NetworkError.timeout("unknown", 0);
+      return new NetworkError(error.message);
     }
-    if (errorWithCode.code === "ENOTFOUND") {
-      return NetworkError.unreachable("unknown", error.message);
-    }
-
-    return InternalError.unexpected(error);
+    return new McpError(`An unexpected error occurred: ${error.message}`);
   }
 
-  return new InternalError(String(error));
+  return new McpError(String(error));
 }

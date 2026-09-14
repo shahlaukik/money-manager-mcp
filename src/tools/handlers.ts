@@ -1,67 +1,71 @@
 /**
- * Tool handlers for the Money Manager MCP server
- * Each handler implements the business logic for a specific MCP tool
+ * Tool handlers for the Money Manager MCP server.
+ *
+ * Each handler is a pure `(client, args) → domain object` function. FastMCP
+ * validates `args` against the tool's Zod schema before invoking the handler,
+ * so handlers receive already-typed input. The `TOOLS` registry binds each
+ * handler with its name, description, and schema for registration in index.ts.
  */
 
+import type { z } from "zod";
+
 import type { HttpClient } from "../client/http-client.js";
+import { FileError, wrapError } from "../errors/index.js";
 import {
-  ValidationError,
-  FileError,
-  wrapError,
-} from "../errors/index.js";
-import {
-  InitGetDataInputSchema,
-  TransactionListInputSchema,
-  TransactionCreateInputSchema,
-  TransactionUpdateInputSchema,
-  TransactionDeleteInputSchema,
-  SummaryGetPeriodInputSchema,
-  SummaryExportExcelInputSchema,
-  AssetListInputSchema,
   AssetCreateInputSchema,
-  AssetUpdateInputSchema,
+  type AssetCreateInput,
   AssetDeleteInputSchema,
-  CardListInputSchema,
+  type AssetDeleteInput,
+  AssetListInputSchema,
+  AssetUpdateInputSchema,
+  type AssetUpdateInput,
   CardCreateInputSchema,
+  type CardCreateInput,
+  CardListInputSchema,
   CardUpdateInputSchema,
-  TransferCreateInputSchema,
-  TransferUpdateInputSchema,
-  DashboardGetOverviewInputSchema,
+  type CardUpdateInput,
   DashboardGetAssetChartInputSchema,
-  BackupDownloadInputSchema,
-  BackupRestoreInputSchema,
+  type DashboardGetAssetChartInput,
+  DashboardGetOverviewInputSchema,
+  InitGetDataInputSchema,
+  type InitGetDataInput,
+  SummaryExportExcelInputSchema,
+  type SummaryExportExcelInput,
+  SummaryGetPeriodInputSchema,
+  type SummaryGetPeriodInput,
+  TransactionCreateInputSchema,
+  type TransactionCreateInput,
+  TransactionDeleteInputSchema,
+  type TransactionDeleteInput,
+  TransactionListInputSchema,
+  type TransactionListInput,
+  TransactionUpdateInputSchema,
+  type TransactionUpdateInput,
+  TransferCreateInputSchema,
+  type TransferCreateInput,
+  TransferUpdateInputSchema,
+  type TransferUpdateInput,
 } from "../schemas/index.js";
 import type {
-  InitDataResponse,
-  RawInitDataResponse,
-  TransactionListResponse,
-  Transaction,
-  TransactionOperationResponse,
-  SummaryResponse,
-  RawSummaryResponse,
-  ExcelExportResponse,
-  AssetListResponse,
   AssetGroup,
-  AssetOperationResponse,
-  CardListResponse,
   CardGroup,
-  CardOperationResponse,
-  TransferOperationResponse,
-  DashboardResponse,
-  RawDashboardResponse,
-  AssetChartResponse,
+  CreditCard,
   RawAssetChartResponse,
-  BackupDownloadResponse,
-  BackupRestoreResponse,
+  RawDashboardResponse,
+  RawInitDataResponse,
+  RawSummaryResponse,
+  Transaction,
 } from "../types/index.js";
 
 // ============================================================================
-// Type definitions for raw API responses
+// Raw API response shapes (internal)
 // ============================================================================
 
-/**
- * Raw XML response structure for transactions
- */
+// These mirror the upstream Money Manager responses and live here, close to the
+// handlers that consume them. Raw*Response domain shapes come from types/, while
+// these two are the loose/loosely-typed XML + operation envelopes.
+
+/** Raw XML response structure for transactions (getXml result). */
 interface RawTransactionXmlResponse {
   dataset: {
     results: string;
@@ -69,9 +73,7 @@ interface RawTransactionXmlResponse {
   };
 }
 
-/**
- * Raw transaction row from XML response
- */
+/** Raw transaction row from the XML response. */
 interface RawTransactionRow {
   id: string;
   mbDate: string;
@@ -90,9 +92,7 @@ interface RawTransactionRow {
   mbDetailContent?: string;
 }
 
-/**
- * Generic API operation response
- */
+/** Generic API operation response (create/update/delete/asset/card/transfer). */
 interface ApiOperationResponse {
   success?: boolean;
   result?: string;
@@ -104,279 +104,209 @@ interface ApiOperationResponse {
 }
 
 // ============================================================================
-// Handler type definition
+// Helpers
 // ============================================================================
 
-/**
- * Type for tool handler function
- */
-export type ToolHandler<TInput, TOutput> = (
-  httpClient: HttpClient,
-  input: TInput,
-) => Promise<TOutput>;
+/** Parses the API's success indicator (missing fields default to success). */
+function succeeded(response: ApiOperationResponse): boolean {
+  return response.success !== false && response.result !== "fail";
+}
 
-// ============================================================================
-// Initialization Handlers
-// ============================================================================
-
-/**
- * Handler for init_get_data tool
- * Retrieves initial application data including categories, payment types, etc.
- */
-export async function handleInitGetData(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<InitDataResponse> {
-  const validated = InitGetDataInputSchema.parse(input);
-
-  const params: Record<string, string | undefined> = {};
-  if (validated.mbid) {
-    params["mbid"] = validated.mbid;
-  }
-
-  const rawResponse = await httpClient.get<RawInitDataResponse>(
-    "/getInitData",
-    params,
-  );
-
-  // Transform the raw response to the expected format
-  return {
-    initData: rawResponse.initData,
-    categories: {
-      income: rawResponse.category_0 || [],
-      expense: rawResponse.category_1 || [],
-    },
-    paymentTypes: rawResponse.payType || [],
-    multiBooks: rawResponse.multiBooks || [],
-    assetGroups: rawResponse.assetGroups || [],
-    assetNames: rawResponse.assetNames || [],
-  };
+/** Coerces the API's string/number money values into a number. */
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return parseFloat(value) || 0;
+  return 0;
 }
 
 // ============================================================================
-// Transaction Handlers
+// Handlers
 // ============================================================================
 
-/**
- * Handler for transaction_list tool
- * Lists transactions within a date range
- */
-export async function handleTransactionList(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<TransactionListResponse> {
-  const validated = TransactionListInputSchema.parse(input);
+/** Retrieves initial application data: categories, payment types, assets, books. */
+export async function handleInitGetData(
+  client: HttpClient,
+  args: InitGetDataInput,
+) {
+  const params: Record<string, string | undefined> = {};
+  if (args.mbid) params["mbid"] = args.mbid;
 
-  const params: Record<string, string | undefined> = {
-    startDate: validated.startDate,
-    endDate: validated.endDate,
-    mbid: validated.mbid,
-    assetId: validated.assetId,
+  const raw = await client.get<RawInitDataResponse>("/getInitData", params);
+  return {
+    initData: raw.initData,
+    categories: {
+      income: raw.category_0 || [],
+      expense: raw.category_1 || [],
+    },
+    paymentTypes: raw.payType || [],
+    multiBooks: raw.multiBooks || [],
+    assetGroups: raw.assetGroups || [],
+    assetNames: raw.assetNames || [],
   };
+}
 
-  const rawResponse = await httpClient.getXml<RawTransactionXmlResponse>(
+/** Lists transactions within a date range (handles three XML empty-edge cases). */
+export async function handleTransactionList(
+  client: HttpClient,
+  args: TransactionListInput,
+) {
+  const raw = await client.getXml<RawTransactionXmlResponse>(
     "/getDataByPeriod",
-    params,
+    {
+      startDate: args.startDate,
+      endDate: args.endDate,
+      mbid: args.mbid,
+      assetId: args.assetId,
+    },
   );
 
-  // Handle case where response is empty or dataset is missing/empty
-  if (!rawResponse || !rawResponse.dataset) {
-    return { count: 0, transactions: [] };
-  }
+  // Missing/empty dataset → no transactions.
+  if (!raw || !raw.dataset) return { count: 0, transactions: [] };
+  // xml2js turns `<dataset results="0"></dataset>` (ignoreAttrs) into a string.
+  if (typeof raw.dataset === "string") return { count: 0, transactions: [] };
 
-  // Handle case where dataset is an empty string (can happen with empty XML elements)
-  // When xml2js parses <dataset results="0"></dataset> with ignoreAttrs:true,
-  // it returns { dataset: "" } instead of { dataset: { results: "0" } }
-  if (typeof rawResponse.dataset === "string") {
-    return { count: 0, transactions: [] };
-  }
-
-  // Parse the XML response
-  const count = parseInt(rawResponse.dataset?.results || "0", 10);
-  let transactions: Transaction[] = [];
-
-  if (rawResponse.dataset?.row) {
-    const rows = Array.isArray(rawResponse.dataset.row)
-      ? rawResponse.dataset.row
-      : [rawResponse.dataset.row];
-
-    transactions = rows.map((row: RawTransactionRow) => ({
-      id: row.id,
-      mbDate: row.mbDate,
-      assetId: row.assetId,
-      toAssetId: row.toAssetId,
-      targetAssetId: row.targetAssetId,
-      payType: row.payType,
-      mcid: row.mcid,
-      mbCategory: row.mbCategory,
-      mcscid: row.mcscid,
-      subCategory: row.subCategory,
-      mbContent: row.mbContent,
-      mbCash: parseFloat(row.mbCash) || 0,
-      inOutCode: row.inOutCode,
-      inOutType: row.inOutType,
-      mbDetailContent: row.mbDetailContent,
-    }));
-  }
+  const count = parseInt(raw.dataset.results || "0", 10);
+  const rows = raw.dataset.row
+    ? Array.isArray(raw.dataset.row)
+      ? raw.dataset.row
+      : [raw.dataset.row]
+    : [];
+  const transactions: Transaction[] = rows.map((row: RawTransactionRow) => ({
+    id: row.id,
+    mbDate: row.mbDate,
+    assetId: row.assetId,
+    toAssetId: row.toAssetId,
+    targetAssetId: row.targetAssetId,
+    payType: row.payType,
+    mcid: row.mcid,
+    mbCategory: row.mbCategory,
+    mcscid: row.mcscid,
+    subCategory: row.subCategory,
+    mbContent: row.mbContent,
+    mbCash: parseFloat(row.mbCash) || 0,
+    inOutCode: row.inOutCode,
+    inOutType: row.inOutType,
+    mbDetailContent: row.mbDetailContent,
+  }));
 
   return { count, transactions };
 }
 
-/**
- * Handler for transaction_create tool
- * Creates a new income or expense transaction
- */
+/** Creates a new income or expense transaction. */
 export async function handleTransactionCreate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<TransactionOperationResponse> {
-  const validated = TransactionCreateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>("/create", {
-    mbDate: validated.mbDate,
-    assetId: validated.assetId,
-    payType: validated.payType,
-    mcid: validated.mcid,
-    mbCategory: validated.mbCategory,
-    mbCash: validated.mbCash,
-    inOutCode: validated.inOutCode,
-    inOutType: validated.inOutType,
-    mcscid: validated.mcscid || "",
-    subCategory: validated.subCategory || "",
-    mbContent: validated.mbContent || "",
-    mbDetailContent: validated.mbDetailContent || "",
+  client: HttpClient,
+  args: TransactionCreateInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/create", {
+    mbDate: args.mbDate,
+    assetId: args.assetId,
+    payType: args.payType,
+    mcid: args.mcid,
+    mbCategory: args.mbCategory,
+    mbCash: args.mbCash,
+    inOutCode: args.inOutCode,
+    inOutType: args.inOutType,
+    mcscid: args.mcscid || "",
+    subCategory: args.subCategory || "",
+    mbContent: args.mbContent || "",
+    mbDetailContent: args.mbDetailContent || "",
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
+    success: succeeded(response),
     transactionId: response.id,
     message: response.message,
   };
 }
 
-/**
- * Handler for transaction_update tool
- * Updates an existing transaction
- */
+/** Updates an existing transaction. */
 export async function handleTransactionUpdate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<TransactionOperationResponse> {
-  const validated = TransactionUpdateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>("/update", {
-    id: validated.id,
-    mbDate: validated.mbDate,
-    assetId: validated.assetId,
-    payType: validated.payType,
-    mcid: validated.mcid,
-    mbCategory: validated.mbCategory,
-    mbCash: validated.mbCash,
-    inOutCode: validated.inOutCode,
-    inOutType: validated.inOutType,
-    mcscid: validated.mcscid || "",
-    subCategory: validated.subCategory || "",
-    mbContent: validated.mbContent || "",
-    mbDetailContent: validated.mbDetailContent || "",
+  client: HttpClient,
+  args: TransactionUpdateInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/update", {
+    id: args.id,
+    mbDate: args.mbDate,
+    assetId: args.assetId,
+    payType: args.payType,
+    mcid: args.mcid,
+    mbCategory: args.mbCategory,
+    mbCash: args.mbCash,
+    inOutCode: args.inOutCode,
+    inOutType: args.inOutType,
+    mcscid: args.mcscid || "",
+    subCategory: args.subCategory || "",
+    mbContent: args.mbContent || "",
+    mbDetailContent: args.mbDetailContent || "",
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
-    transactionId: validated.id,
+    success: succeeded(response),
+    transactionId: args.id,
     message: response.message,
   };
 }
 
-/**
- * Handler for transaction_delete tool
- * Deletes one or more transactions
- */
+/** Deletes one or more transactions (API expects ":id1:id2:id3"). */
 export async function handleTransactionDelete(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<TransactionOperationResponse> {
-  const validated = TransactionDeleteInputSchema.parse(input);
-
-  // Format IDs as colon-separated string (API expects ":id1:id2:id3" format)
-  const idsString = ":" + validated.ids.join(":");
-
-  const response = await httpClient.post<ApiOperationResponse>("/delete", {
-    ids: idsString,
+  client: HttpClient,
+  args: TransactionDeleteInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/delete", {
+    ids: ":" + args.ids.join(":"),
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
-    deletedCount: validated.ids.length,
+    success: succeeded(response),
+    deletedCount: args.ids.length,
     message: response.message,
   };
 }
 
-// ============================================================================
-// Summary Handlers
-// ============================================================================
-
-/**
- * Handler for summary_get_period tool
- * Retrieves financial summary statistics for a date range
- */
+/** Retrieves financial summary statistics for a date range. */
 export async function handleSummaryGetPeriod(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<SummaryResponse> {
-  const validated = SummaryGetPeriodInputSchema.parse(input);
-
-  const rawResponse = await httpClient.get<RawSummaryResponse>(
-    "/getSummaryDataByPeriod",
-    {
-      startDate: validated.startDate,
-      endDate: validated.endDate,
-    },
-  );
-
+  client: HttpClient,
+  args: SummaryGetPeriodInput,
+) {
+  const raw = await client.get<RawSummaryResponse>("/getSummaryDataByPeriod", {
+    startDate: args.startDate,
+    endDate: args.endDate,
+  });
   return {
-    summary: rawResponse.summary,
-    incomeByCategory: rawResponse.income || [],
-    expenseByCategory: rawResponse.outcome || [],
+    summary: raw.summary,
+    incomeByCategory: raw.income || [],
+    expenseByCategory: raw.outcome || [],
   };
 }
 
 /**
- * Handler for summary_export_excel tool
- * Exports transaction data to Excel file
+ * Exports transactions to Excel.
  *
- * NOTE: The Money Manager API returns an HTML file with Excel metadata,
- * not a proper XLSX binary. This format works with .xls extension.
- * If user provides .xlsx extension, it will be auto-corrected to .xls.
+ * NOTE: the Money Manager API returns an HTML file with Excel metadata, not a
+ * proper XLSX binary. This format works with `.xls`; if `.xlsx` is requested it
+ * is auto-corrected to `.xls` with a warning in the response message.
  */
 export async function handleSummaryExportExcel(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<ExcelExportResponse> {
-  const validated = SummaryExportExcelInputSchema.parse(input);
-
-  // Auto-correct .xlsx extension to .xls since API returns HTML-based Excel format
-  let outputPath = validated.outputPath;
+  client: HttpClient,
+  args: SummaryExportExcelInput,
+) {
+  let outputPath = args.outputPath;
   let extensionCorrected = false;
-
   if (outputPath.toLowerCase().endsWith(".xlsx")) {
     outputPath = outputPath.slice(0, -5) + ".xls";
     extensionCorrected = true;
   }
 
   try {
-    const result = await httpClient.downloadFile("/getExcelFile", outputPath, {
-      startDate: validated.startDate,
-      endDate: validated.endDate,
-      mbid: validated.mbid,
-      assetId: validated.assetId || "",
-      inOutType: validated.inOutType || "",
+    const result = await client.downloadFile("/getExcelFile", outputPath, {
+      startDate: args.startDate,
+      endDate: args.endDate,
+      mbid: args.mbid,
+      assetId: args.assetId || "",
+      inOutType: args.inOutType || "",
     });
 
     let message = `Excel file exported successfully to ${result.filePath}`;
     if (extensionCorrected) {
       message += ` (Note: Extension was changed from .xlsx to .xls because the server returns HTML-based Excel format which requires .xls extension for proper compatibility)`;
     }
-
     return {
       success: true,
       filePath: result.filePath,
@@ -391,460 +321,382 @@ export async function handleSummaryExportExcel(
   }
 }
 
-// ============================================================================
-// Asset Handlers
-// ============================================================================
+/** Retrieves all assets in a hierarchical structure. */
+export async function handleAssetList(client: HttpClient) {
+  const raw = await client.get<AssetGroup[]>("/getAssetData");
+  const assetGroups: AssetGroup[] = Array.isArray(raw) ? raw : [];
 
-/**
- * Helper to parse string or number to number
- */
-function toNumber(value: unknown): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") return parseFloat(value) || 0;
-  return 0;
-}
-
-/**
- * Handler for asset_list tool
- * Retrieves all assets in a hierarchical structure
- */
-export async function handleAssetList(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<AssetListResponse> {
-  AssetListInputSchema.parse(input);
-
-  const rawResponse = await httpClient.get<AssetGroup[]>("/getAssetData");
-
-  // Calculate total balance from all asset groups
   let totalBalance = 0;
-  const assetGroups: AssetGroup[] = Array.isArray(rawResponse)
-    ? rawResponse
-    : [];
-
   for (const group of assetGroups) {
     if (group.children) {
       for (const asset of group.children) {
-        // API returns assetMoney as string, need to parse it
         totalBalance += toNumber(asset.assetMoney);
       }
     }
   }
-
-  return {
-    assetGroups,
-    totalBalance,
-  };
+  return { assetGroups, totalBalance };
 }
 
-/**
- * Handler for asset_create tool
- * Creates a new asset/account
- */
+/** Creates a new asset/account. */
 export async function handleAssetCreate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<AssetOperationResponse> {
-  const validated = AssetCreateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>("/assetAdd", {
-    assetGroupId: validated.assetGroupId,
-    assetGroupName: validated.assetGroupName,
-    assetName: validated.assetName,
-    assetMoney: validated.assetMoney,
-    linkAssetId: validated.linkAssetId || "",
-    linkAssetName: validated.linkAssetName || "",
+  client: HttpClient,
+  args: AssetCreateInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/assetAdd", {
+    assetGroupId: args.assetGroupId,
+    assetGroupName: args.assetGroupName,
+    assetName: args.assetName,
+    assetMoney: args.assetMoney,
+    linkAssetId: args.linkAssetId || "",
+    linkAssetName: args.linkAssetName || "",
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
+    success: succeeded(response),
     assetId: response.assetId,
     message: response.message,
   };
 }
 
-/**
- * Handler for asset_update tool
- * Modifies an existing asset
- */
+/** Modifies an existing asset. */
 export async function handleAssetUpdate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<AssetOperationResponse> {
-  const validated = AssetUpdateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>("/assetModify", {
-    assetId: validated.assetId,
-    assetGroupId: validated.assetGroupId,
-    assetGroupName: validated.assetGroupName,
-    assetName: validated.assetName,
-    assetMoney: validated.assetMoney,
-    linkAssetId: validated.linkAssetId || "",
-    linkAssetName: validated.linkAssetName || "",
+  client: HttpClient,
+  args: AssetUpdateInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/assetModify", {
+    assetId: args.assetId,
+    assetGroupId: args.assetGroupId,
+    assetGroupName: args.assetGroupName,
+    assetName: args.assetName,
+    assetMoney: args.assetMoney,
+    linkAssetId: args.linkAssetId || "",
+    linkAssetName: args.linkAssetName || "",
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
-    assetId: validated.assetId,
+    success: succeeded(response),
+    assetId: args.assetId,
     message: response.message,
   };
 }
 
-/**
- * Handler for asset_delete tool
- * Removes an asset
- */
+/** Removes an asset. */
 export async function handleAssetDelete(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<AssetOperationResponse> {
-  const validated = AssetDeleteInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>("/removeAsset", {
-    assetId: validated.assetId,
+  client: HttpClient,
+  args: AssetDeleteInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/removeAsset", {
+    assetId: args.assetId,
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
-    assetId: validated.assetId,
+    success: succeeded(response),
+    assetId: args.assetId,
     message: response.message,
   };
 }
 
-// ============================================================================
-// Credit Card Handlers
-// ============================================================================
-
 /**
- * Handler for card_list tool
- * Retrieves all credit cards in a hierarchical structure
+ * Day-of-month from card data. Upstream serializes these fields as strings
+ * ("1", or the literal "null" after a modify omitted them), so accept numeric
+ * strings and reject anything else rather than trusting the declared type.
  */
-export async function handleCardList(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<CardListResponse> {
-  CardListInputSchema.parse(input);
+function toDayValue(value: unknown): number | undefined {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 31 ? n : undefined;
+}
 
-  const rawResponse = await httpClient.get<CardGroup[]>("/getCardData");
+/** Finds one card by asset id across all card groups. */
+async function findCard(
+  client: HttpClient,
+  assetId: string,
+): Promise<CreditCard | undefined> {
+  const { cardGroups } = await handleCardList(client);
+  for (const group of cardGroups) {
+    const card = group.children.find((card) => card.assetId === assetId);
+    if (card) return card;
+  }
+  return undefined;
+}
 
-  // Calculate total unpaid balance from all card groups
+/** Retrieves all credit cards in a hierarchical structure. */
+export async function handleCardList(client: HttpClient) {
+  const raw = await client.get<CardGroup[]>("/getCardData");
+  const cardGroups: CardGroup[] = Array.isArray(raw) ? raw : [];
+
   let totalUnpaid = 0;
-  const cardGroups: CardGroup[] = Array.isArray(rawResponse) ? rawResponse : [];
-
   for (const group of cardGroups) {
     if (group.children) {
       for (const card of group.children) {
-        // API returns notPayMoney as string, need to parse it
         totalUnpaid += Math.abs(toNumber(card.notPayMoney));
       }
     }
   }
-
-  return {
-    cardGroups,
-    totalUnpaid,
-  };
+  return { cardGroups, totalUnpaid };
 }
 
-/**
- * Handler for card_create tool
- * Creates a new credit card
- */
+/** Creates a new credit card. */
 export async function handleCardCreate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<CardOperationResponse> {
-  const validated = CardCreateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>(
-    "/addAssetCard",
-    {
-      cardName: validated.cardName,
-      linkAssetId: validated.linkAssetId,
-      linkAssetName: validated.linkAssetName,
-      notPayMoney: validated.notPayMoney,
-      jungsanDay: validated.jungsanDay,
-      paymentDay: validated.paymentDay,
-    },
-  );
-
+  client: HttpClient,
+  args: CardCreateInput,
+) {
+  // Both day fields must always be sent: /addAssetCard spins forever when
+  // either is missing (verified against a live server), so they default to 1.
+  const response = await client.post<ApiOperationResponse>("/addAssetCard", {
+    cardName: args.cardName,
+    linkAssetId: args.linkAssetId,
+    linkAssetName: args.linkAssetName,
+    notPayMoney: args.notPayMoney,
+    jungsanDay: args.jungsanDay ?? 1,
+    paymentDay: args.paymentDay ?? 1,
+  });
   return {
-    success: response.success !== false && response.result !== "fail",
+    success: succeeded(response),
     cardId: response.cardId || response.assetId,
     message: response.message,
   };
 }
 
-/**
- * Handler for card_update tool
- * Modifies an existing credit card
- */
+/** Modifies an existing credit card. */
 export async function handleCardUpdate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<CardOperationResponse> {
-  const validated = CardUpdateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>("/modifyCard", {
-    assetId: validated.assetId,
-    cardName: validated.cardName,
-    linkAssetId: validated.linkAssetId,
-    linkAssetName: validated.linkAssetName,
-    jungsanDay: validated.jungsanDay,
-    paymentDay: validated.paymentDay,
+  client: HttpClient,
+  args: CardUpdateInput,
+) {
+  // /modifyCard resets any field that is not re-sent (verified: omitted days
+  // come back as jungsanDay 1 / paymentDay "null"), so omitted days fall back
+  // to the card's current values to keep this a partial update.
+  const current = await findCard(client, args.assetId);
+  const response = await client.post<ApiOperationResponse>("/modifyCard", {
+    assetId: args.assetId,
+    cardName: args.cardName,
+    linkAssetId: args.linkAssetId,
+    linkAssetName: args.linkAssetName,
+    jungsanDay: args.jungsanDay ?? toDayValue(current?.jungsanDay) ?? 1,
+    paymentDay: args.paymentDay ?? toDayValue(current?.paymentDay) ?? 1,
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
-    cardId: validated.assetId,
+    success: succeeded(response),
+    cardId: args.assetId,
     message: response.message,
   };
 }
 
-// ============================================================================
-// Transfer Handlers
-// ============================================================================
-
-/**
- * Handler for transfer_create tool
- * Transfers money between two assets
- */
+/** Transfers money between two assets. */
 export async function handleTransferCreate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<TransferOperationResponse> {
-  const validated = TransferCreateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>("/moveAsset", {
-    moveDate: validated.moveDate,
-    fromAssetId: validated.fromAssetId,
-    fromAssetName: validated.fromAssetName,
-    toAssetId: validated.toAssetId,
-    toAssetName: validated.toAssetName,
-    moveMoney: validated.moveMoney,
-    moneyContent: validated.moneyContent || "",
-    mbDetailContent: validated.mbDetailContent || "",
+  client: HttpClient,
+  args: TransferCreateInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/moveAsset", {
+    moveDate: args.moveDate,
+    fromAssetId: args.fromAssetId,
+    fromAssetName: args.fromAssetName,
+    toAssetId: args.toAssetId,
+    toAssetName: args.toAssetName,
+    moveMoney: args.moveMoney,
+    moneyContent: args.moneyContent || "",
+    mbDetailContent: args.mbDetailContent || "",
   });
-
   return {
-    success: response.success !== false && response.result !== "fail",
+    success: succeeded(response),
     transferId: response.transferId || response.id,
     message: response.message,
   };
 }
 
 /**
- * Handler for transfer_update tool
- * Modifies an existing transfer
+ * Modifies an existing transfer.
  *
- * WARNING: The server-side API creates a NEW transfer with a NEW ID instead of
- * updating in-place. The old ID will no longer exist after this operation.
- * Use transaction_list to retrieve the new ID if needed.
+ * WARNING: the server-side API creates a NEW transfer with a NEW ID instead of
+ * updating in-place — the old ID becomes invalid. Use transaction_list to find it.
  */
 export async function handleTransferUpdate(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<TransferOperationResponse> {
-  const validated = TransferUpdateInputSchema.parse(input);
-
-  const response = await httpClient.post<ApiOperationResponse>(
-    "/modifyMoveAsset",
-    {
-      id: validated.id,
-      moveDate: validated.moveDate,
-      fromAssetId: validated.fromAssetId,
-      fromAssetName: validated.fromAssetName,
-      toAssetId: validated.toAssetId,
-      toAssetName: validated.toAssetName,
-      moveMoney: validated.moveMoney,
-      moneyContent: validated.moneyContent || "",
-      mbDetailContent: validated.mbDetailContent || "",
-    },
-  );
-
+  client: HttpClient,
+  args: TransferUpdateInput,
+) {
+  const response = await client.post<ApiOperationResponse>("/modifyMoveAsset", {
+    id: args.id,
+    moveDate: args.moveDate,
+    fromAssetId: args.fromAssetId,
+    fromAssetName: args.fromAssetName,
+    toAssetId: args.toAssetId,
+    toAssetName: args.toAssetName,
+    moveMoney: args.moveMoney,
+    moneyContent: args.moneyContent || "",
+    mbDetailContent: args.mbDetailContent || "",
+  });
   return {
-    success: response.success !== false && response.result !== "fail",
-    transferId: validated.id,
+    success: succeeded(response),
+    transferId: args.id,
     message:
       response.message ||
       "WARNING: The server creates a new transfer with a NEW ID. The provided ID is now invalid. Use transaction_list to get the new ID.",
   };
 }
 
-// ============================================================================
-// Dashboard Handlers
-// ============================================================================
-
-/**
- * Handler for dashboard_get_overview tool
- * Retrieves dashboard overview with asset trends and portfolio breakdown
- */
-export async function handleDashboardGetOverview(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<DashboardResponse> {
-  DashboardGetOverviewInputSchema.parse(input);
-
-  const rawResponse =
-    await httpClient.get<RawDashboardResponse>("/getDashBoardData");
-
+/** Retrieves dashboard overview (asset trends + portfolio breakdown). */
+export async function handleDashboardGetOverview(client: HttpClient) {
+  const raw = await client.get<RawDashboardResponse>("/getDashBoardData");
   return {
-    assetSummary: rawResponse.assetSummary,
-    monthlyTrend: rawResponse.assetLine || [],
-    assetRatio: rawResponse.assetRatio || [],
-    debtRatio: rawResponse.debtRatio || [],
+    assetSummary: raw.assetSummary,
+    monthlyTrend: raw.assetLine || [],
+    assetRatio: raw.assetRatio || [],
+    debtRatio: raw.debtRatio || [],
   };
 }
 
-/**
- * Handler for dashboard_get_asset_chart tool
- * Retrieves historical chart data for a specific asset
- */
+/** Retrieves historical chart data for a specific asset (note: uses POST). */
 export async function handleDashboardGetAssetChart(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<AssetChartResponse> {
-  const validated = DashboardGetAssetChartInputSchema.parse(input);
-
-  const rawResponse = await httpClient.post<RawAssetChartResponse>(
+  client: HttpClient,
+  args: DashboardGetAssetChartInput,
+) {
+  const raw = await client.post<RawAssetChartResponse>(
     "/getEachAssetChartData",
-    {
-      assetId: validated.assetId,
-    },
+    { assetId: args.assetId },
   );
-
-  return {
-    assetId: validated.assetId,
-    chartData: rawResponse.assetChartData || [],
-  };
+  return { assetId: args.assetId, chartData: raw.assetChartData || [] };
 }
 
 // ============================================================================
-// Backup Handlers
+// Tool registry
 // ============================================================================
 
 /**
- * Handler for backup_download tool
- * Downloads the SQLite database backup
+ * A handler takes the HTTP client + validated args and returns a domain object.
+ * Each handler is typed against its own schema's inferred input type; the
+ * `ToolDefinition` wrapper erases that generic so tools can live in one array.
  */
-export async function handleBackupDownload(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<BackupDownloadResponse> {
-  const validated = BackupDownloadInputSchema.parse(input);
+type Handler<A> = (client: HttpClient, args: A) => Promise<unknown>;
 
-  try {
-    const result = await httpClient.downloadFileGet(
-      "/money.sqlite",
-      validated.outputPath,
-    );
+/** Definition consumed by index.ts to register a FastMCP tool. */
+type ToolDefinition<A = unknown> = {
+  name: string;
+  description: string;
+  schema: z.ZodType;
+  handler: Handler<A>;
+};
 
-    return {
-      success: true,
-      filePath: result.filePath,
-      fileSize: result.fileSize,
-      message: `Database backup downloaded successfully to ${result.filePath}`,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      throw FileError.writeFailed(validated.outputPath, error.message);
-    }
-    throw wrapError(error);
-  }
-}
+/** Erased tool definition (the args type is enforced per-handler, not here). */
+type AnyToolDefinition = ToolDefinition<unknown>;
 
 /**
- * Handler for backup_restore tool
- * Restores from a SQLite database backup file
+ * All tools, each defined once: name + description + Zod schema (auto-advertised
+ * and used for validation by FastMCP) + handler. The array is cast to the erased
+ * type — each entry is fully type-checked against its own schema's input above.
  */
-export async function handleBackupRestore(
-  httpClient: HttpClient,
-  input: unknown,
-): Promise<BackupRestoreResponse> {
-  const validated = BackupRestoreInputSchema.parse(input);
-
-  try {
-    const response = await httpClient.uploadFile<ApiOperationResponse>(
-      "/uploadSqlFile",
-      validated.filePath,
-      "file",
-    );
-
-    return {
-      success: response.success !== false && response.result !== "fail",
-      message: response.message || "Database restored successfully",
-    };
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("File not found")) {
-      throw FileError.notFound(validated.filePath);
-    }
-    throw wrapError(error);
-  }
-}
-
-// ============================================================================
-// Handler Registry
-// ============================================================================
-
-/**
- * Map of tool names to their handler functions
- */
-export const toolHandlers = {
-  // Initialization
-  init_get_data: handleInitGetData,
-
-  // Transactions
-  transaction_list: handleTransactionList,
-  transaction_create: handleTransactionCreate,
-  transaction_update: handleTransactionUpdate,
-  transaction_delete: handleTransactionDelete,
-
-  // Summary
-  summary_get_period: handleSummaryGetPeriod,
-  summary_export_excel: handleSummaryExportExcel,
-
-  // Assets
-  asset_list: handleAssetList,
-  asset_create: handleAssetCreate,
-  asset_update: handleAssetUpdate,
-  asset_delete: handleAssetDelete,
-
-  // Credit Cards
-  card_list: handleCardList,
-  card_create: handleCardCreate,
-  card_update: handleCardUpdate,
-
-  // Transfers
-  transfer_create: handleTransferCreate,
-  transfer_update: handleTransferUpdate,
-
-  // Dashboard
-  dashboard_get_overview: handleDashboardGetOverview,
-  dashboard_get_asset_chart: handleDashboardGetAssetChart,
-
-  // Backup
-  backup_download: handleBackupDownload,
-  backup_restore: handleBackupRestore,
-} as const;
-
-/**
- * Type for tool handler names
- */
-export type ToolHandlerName = keyof typeof toolHandlers;
-
-/**
- * Execute a tool by name
- */
-export async function executeToolHandler(
-  httpClient: HttpClient,
-  toolName: string,
-  input: unknown,
-): Promise<unknown> {
-  const handler = toolHandlers[toolName as ToolHandlerName];
-
-  if (!handler) {
-    throw new ValidationError(`Unknown tool: ${toolName}`);
-  }
-
-  return handler(httpClient, input);
-}
+export const TOOLS: AnyToolDefinition[] = [
+  {
+    name: "init_get_data",
+    description:
+      "Retrieves initial application data including categories, payment types, asset groups, and multi-book configuration.",
+    schema: InitGetDataInputSchema,
+    handler: handleInitGetData,
+  },
+  {
+    name: "transaction_list",
+    description:
+      "Lists transactions within a date range. NOTE: the upstream server has a known bug where this call can hang/time out on ranges that contain no transactions — if a call times out, narrow the range or confirm the range contains data first. Transfers appear as two rows: a Transfer-Out (inOutCode '3', negative amount) on the source asset and a Transfer-In (inOutCode '4', positive) on the destination.",
+    schema: TransactionListInputSchema,
+    handler: handleTransactionList,
+  },
+  {
+    name: "transaction_create",
+    description:
+      "Creates a new income or expense transaction. Returns {success, message} but NOT the new transaction ID — the upstream API does not return it. Call transaction_list (filtered by date/asset) afterward to discover the new record's id. Use IDs/mcids/payment-type names from init_get_data.",
+    schema: TransactionCreateInputSchema,
+    handler: handleTransactionCreate,
+  },
+  {
+    name: "transaction_update",
+    description: "Updates an existing transaction.",
+    schema: TransactionUpdateInputSchema,
+    handler: handleTransactionUpdate,
+  },
+  {
+    name: "transaction_delete",
+    description: "Deletes one or more transactions.",
+    schema: TransactionDeleteInputSchema,
+    handler: handleTransactionDelete,
+  },
+  {
+    name: "summary_get_period",
+    description: "Retrieves financial summary statistics for a date range.",
+    schema: SummaryGetPeriodInputSchema,
+    handler: handleSummaryGetPeriod,
+  },
+  {
+    name: "summary_export_excel",
+    description:
+      "Exports transaction data to Excel file. The server returns an HTML-based Excel format. Use .xls extension for best compatibility (if .xlsx is provided, it will be auto-corrected to .xls with a warning). outputPath must be a relative .xls/.xlsx path inside the working directory — other extensions, absolute paths, and parent-directory traversal are rejected.",
+    schema: SummaryExportExcelInputSchema,
+    handler: handleSummaryExportExcel,
+  },
+  {
+    name: "asset_list",
+    description: "Retrieves all assets in a hierarchical structure.",
+    schema: AssetListInputSchema,
+    handler: handleAssetList,
+  },
+  {
+    name: "asset_create",
+    description:
+      "Creates a new asset/account. Returns {success, message} but NOT the new asset ID — the upstream API does not return it. Call asset_list afterward to discover the new asset's id. Use assetGroupId values from init_get_data.",
+    schema: AssetCreateInputSchema,
+    handler: handleAssetCreate,
+  },
+  {
+    name: "asset_update",
+    description: "Modifies an existing asset.",
+    schema: AssetUpdateInputSchema,
+    handler: handleAssetUpdate,
+  },
+  {
+    name: "asset_delete",
+    description: "Removes an asset.",
+    schema: AssetDeleteInputSchema,
+    handler: handleAssetDelete,
+  },
+  {
+    name: "card_list",
+    description: "Retrieves all credit cards in a hierarchical structure.",
+    schema: CardListInputSchema,
+    handler: handleCardList,
+  },
+  {
+    name: "card_create",
+    description:
+      "Creates a new credit card. Returns {success, message} but NOT the new card ID — the upstream API does not return it. Call card_list afterward to discover the new card's id. linkAssetId/linkAssetName must be an existing payment asset from init_get_data. jungsanDay/paymentDay default to 1 because the upstream API hangs indefinitely when either is omitted. NOTE: there is no card_delete tool (the upstream API exposes no delete endpoint), so created cards cannot be removed programmatically.",
+    schema: CardCreateInputSchema,
+    handler: handleCardCreate,
+  },
+  {
+    name: "card_update",
+    description:
+      "Modifies an existing credit card. Omitted jungsanDay/paymentDay keep the card's current values — the upstream API resets any field that is not re-sent, so the server fills them in from the card's state before updating.",
+    schema: CardUpdateInputSchema,
+    handler: handleCardUpdate,
+  },
+  {
+    name: "transfer_create",
+    description:
+      "Transfers money between two assets. Returns {success, message} but NOT the new transfer ID — the upstream API does not return it. Call transaction_list (filtered by from-asset and date, looking for inOutCode '3' Transfer-Out rows) afterward to discover the new transfer's id.",
+    schema: TransferCreateInputSchema,
+    handler: handleTransferCreate,
+  },
+  {
+    name: "transfer_update",
+    description:
+      "Modifies an existing transfer. WARNING: The upstream API does NOT update in-place — it creates a NEW transfer with a NEW ID and invalidates the old one. The response includes this warning; to find the new ID afterward, call transaction_list filtered by the from-asset and date (look for inOutCode '3' Transfer-Out rows). Pass the Transfer-Out row's id as the transfer's logical id.",
+    schema: TransferUpdateInputSchema,
+    handler: handleTransferUpdate,
+  },
+  {
+    name: "dashboard_get_overview",
+    description:
+      "Retrieves dashboard overview with asset trends and portfolio breakdown.",
+    schema: DashboardGetOverviewInputSchema,
+    handler: handleDashboardGetOverview,
+  },
+  {
+    name: "dashboard_get_asset_chart",
+    description: "Retrieves historical chart data for a specific asset.",
+    schema: DashboardGetAssetChartInputSchema,
+    handler: handleDashboardGetAssetChart,
+  },
+] as AnyToolDefinition[];

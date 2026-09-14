@@ -1,4 +1,6 @@
 import { z } from "zod";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 /**
  * Zod schemas for input validation
@@ -25,13 +27,6 @@ export const NonEmptyString = z.string().min(1, "String cannot be empty");
  * Positive number
  */
 export const PositiveNumber = z.number().positive("Number must be positive");
-
-/**
- * Non-negative number (zero or positive)
- */
-export const NonNegativeNumber = z
-  .number()
-  .min(0, "Number must be non-negative");
 
 /**
  * Money book ID
@@ -76,9 +71,7 @@ export type InitGetDataInput = z.infer<typeof InitGetDataInputSchema>;
  * Income/Expense code
  */
 export const InOutCodeSchema = z.enum(["0", "1"], {
-  errorMap: () => ({
-    message: "inOutCode must be '0' (Income) or '1' (Expense)",
-  }),
+  message: "inOutCode must be '0' (Income) or '1' (Expense)",
 });
 
 /**
@@ -173,16 +166,84 @@ export const SummaryGetPeriodInputSchema = z.object({
 export type SummaryGetPeriodInput = z.infer<typeof SummaryGetPeriodInputSchema>;
 
 /**
- * Input schema for summary_export_excel tool
+ * True if `outputPath` resolves to a location inside the current working
+ * directory. Symlinks on the deepest existing ancestor are resolved too, so a
+ * pre-existing link under the cwd pointing elsewhere fails the check instead
+ * of smuggling the export outside the working directory.
+ *
+ * Existence is probed with `lstatSync` (which does not follow symlinks), so a
+ * dangling symlink at any point along the path stops the walk and gets fully
+ * resolved — a dangling link would otherwise pass an `existsSync` probe (its
+ * target doesn't exist) and be followed by the eventual write. Any lookup
+ * error fails closed.
  */
-export const SummaryExportExcelInputSchema = z.object({
-  startDate: DateSchema,
-  endDate: DateSchema,
-  mbid: MbidSchema,
-  assetId: z.string().optional(),
-  inOutType: z.string().optional(),
-  outputPath: NonEmptyString,
-});
+export function resolvesInsideWorkingDirectory(outputPath: string): boolean {
+  try {
+    const cwd = fs.realpathSync(process.cwd());
+    const resolved = path.resolve(process.cwd(), outputPath);
+
+    // The export file usually doesn't exist yet; walk up to the deepest
+    // ancestor that exists and resolve symlinks from there.
+    let existing = resolved;
+    for (;;) {
+      try {
+        fs.lstatSync(existing);
+        break;
+      } catch {
+        const parent = path.dirname(existing);
+        if (parent === existing) {
+          break; // reached the filesystem root
+        }
+        existing = parent;
+      }
+    }
+    const target = path.join(
+      fs.realpathSync(existing),
+      resolved.slice(existing.length),
+    );
+
+    // `target` must equal the real cwd or live under it (with a separator).
+    return (
+      target === cwd ||
+      target.startsWith(cwd + path.sep) ||
+      target.startsWith(cwd + "/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Input schema for summary_export_excel tool
+ *
+ * `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the
+ * server's working directory. This stops a caller from exporting financial
+ * data to an arbitrary location (e.g. `../../../../etc/...`, an absolute path,
+ * or a symlink planted under the cwd pointing outside it) and from using the
+ * export as a primitive to overwrite non-export files (`.gitconfig`,
+ * `package.json`, …) inside the working directory. The checks run in
+ * validation so a malicious or prompt-injected client is rejected before the
+ * handler runs; the write path re-runs the containment check at write time.
+ */
+export const SummaryExportExcelInputSchema = z
+  .object({
+    startDate: DateSchema,
+    endDate: DateSchema,
+    mbid: MbidSchema,
+    assetId: z.string().optional(),
+    inOutType: z.string().optional(),
+    outputPath: NonEmptyString,
+  })
+  .refine((data) => /\.(xlsx|xls)$/i.test(data.outputPath), {
+    message:
+      "outputPath must end in .xls or .xlsx (other extensions are not allowed).",
+    path: ["outputPath"],
+  })
+  .refine((data) => resolvesInsideWorkingDirectory(data.outputPath), {
+    message:
+      "outputPath must be a relative path inside the working directory (absolute paths and parent-directory traversal are not allowed).",
+    path: ["outputPath"],
+  });
 
 export type SummaryExportExcelInput = z.infer<
   typeof SummaryExportExcelInputSchema
@@ -242,16 +303,22 @@ export type AssetDeleteInput = z.infer<typeof AssetDeleteInputSchema>;
 // ============================================================================
 
 /**
- * Day of month (1-31)
- */
-export const DayOfMonthSchema = z.number().int().min(1).max(31);
-
-/**
  * Input schema for card_list tool (no parameters)
  */
 export const CardListInputSchema = z.object({});
 
 export type CardListInput = z.infer<typeof CardListInputSchema>;
+
+/**
+ * Day of month (1-31), shared by card_create / card_update.
+ *
+ * Zod v4's JSON-Schema conversion — which FastMCP uses for v4 schemas —
+ * inlines reused subschemas by default, so each usage is advertised as an
+ * explicit `{"type":"integer"}`. (Under zod v3 the converter deduplicated
+ * shared subschemas into `$ref` pointers that many MCP clients don't resolve,
+ * so these fields had to be defined inline per schema.)
+ */
+export const DayOfMonthSchema = z.number().int().min(1).max(31);
 
 /**
  * Input schema for card_create tool
@@ -341,97 +408,3 @@ export const DashboardGetAssetChartInputSchema = z.object({
 export type DashboardGetAssetChartInput = z.infer<
   typeof DashboardGetAssetChartInputSchema
 >;
-
-// ============================================================================
-// Backup Schemas
-// ============================================================================
-
-/**
- * Input schema for backup_download tool
- */
-export const BackupDownloadInputSchema = z.object({
-  outputPath: NonEmptyString,
-});
-
-export type BackupDownloadInput = z.infer<typeof BackupDownloadInputSchema>;
-
-/**
- * Input schema for backup_restore tool
- */
-export const BackupRestoreInputSchema = z.object({
-  filePath: NonEmptyString,
-});
-
-export type BackupRestoreInput = z.infer<typeof BackupRestoreInputSchema>;
-
-// ============================================================================
-// Tool Schema Registry
-// ============================================================================
-
-/**
- * Registry of all tool input schemas
- */
-export const ToolSchemas = {
-  // Initialization
-  init_get_data: InitGetDataInputSchema,
-
-  // Transactions
-  transaction_list: TransactionListInputSchema,
-  transaction_create: TransactionCreateInputSchema,
-  transaction_update: TransactionUpdateInputSchema,
-  transaction_delete: TransactionDeleteInputSchema,
-
-  // Summary
-  summary_get_period: SummaryGetPeriodInputSchema,
-  summary_export_excel: SummaryExportExcelInputSchema,
-
-  // Assets
-  asset_list: AssetListInputSchema,
-  asset_create: AssetCreateInputSchema,
-  asset_update: AssetUpdateInputSchema,
-  asset_delete: AssetDeleteInputSchema,
-
-  // Credit Cards
-  card_list: CardListInputSchema,
-  card_create: CardCreateInputSchema,
-  card_update: CardUpdateInputSchema,
-
-  // Transfers
-  transfer_create: TransferCreateInputSchema,
-  transfer_update: TransferUpdateInputSchema,
-
-  // Dashboard
-  dashboard_get_overview: DashboardGetOverviewInputSchema,
-  dashboard_get_asset_chart: DashboardGetAssetChartInputSchema,
-
-  // Backup
-  backup_download: BackupDownloadInputSchema,
-  backup_restore: BackupRestoreInputSchema,
-} as const;
-
-/**
- * Type for tool names
- */
-export type ToolName = keyof typeof ToolSchemas;
-
-/**
- * Helper function to validate tool input
- */
-export function validateToolInput<T extends ToolName>(
-  toolName: T,
-  input: unknown,
-): z.infer<(typeof ToolSchemas)[T]> {
-  const schema = ToolSchemas[toolName];
-  return schema.parse(input);
-}
-
-/**
- * Helper function to safely validate tool input (returns result object)
- */
-export function safeValidateToolInput<T extends ToolName>(
-  toolName: T,
-  input: unknown,
-): z.SafeParseReturnType<unknown, z.infer<(typeof ToolSchemas)[T]>> {
-  const schema = ToolSchemas[toolName];
-  return schema.safeParse(input);
-}
