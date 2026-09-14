@@ -265,18 +265,20 @@ Creates a new credit card.
 
 **Parameters:**
 
-| Parameter       | Type   | Required | Description                    |
-| --------------- | ------ | -------- | ------------------------------ |
-| `cardName`      | string | Yes      | Card name                      |
-| `linkAssetId`   | string | Yes      | Linked payment asset ID        |
-| `linkAssetName` | string | Yes      | Linked payment asset name      |
-| `notPayMoney`   | number | Yes      | Unpaid balance (negative)      |
-| `jungsanDay`    | number | No       | Balance calculation day (1-31) |
-| `paymentDay`    | number | No       | Payment due day (1-31)         |
+| Parameter       | Type   | Required           | Description                    |
+| --------------- | ------ | ------------------ | ------------------------------ |
+| `cardName`      | string | Yes                | Card name                      |
+| `linkAssetId`   | string | Yes                | Linked payment asset ID        |
+| `linkAssetName` | string | Yes                | Linked payment asset name      |
+| `notPayMoney`   | number | Yes                | Unpaid balance (negative)      |
+| `jungsanDay`    | number | No (defaults to 1) | Balance calculation day (1-31) |
+| `paymentDay`    | number | No (defaults to 1) | Payment due day (1-31)         |
 
 **Returns:** `{success, message}` — **does NOT return the new card ID** (the upstream API omits it). To obtain the new ID, call `card_list` immediately after.
 
 > ⚠️ **Cards cannot be deleted.** The upstream Money Manager API exposes no card-delete endpoint, so there is no `card_delete` tool. A card created here can only be removed manually in the Android app.
+>
+> ⚠️ **The day fields are always sent, defaulting to 1.** The upstream API hangs indefinitely when a card is created without `jungsanDay` and `paymentDay`, so the server fills in `1` for either day that is omitted.
 
 **Example prompts:**
 
@@ -288,14 +290,16 @@ Updates a credit card.
 
 **Parameters:**
 
-| Parameter       | Type   | Required | Description               |
-| --------------- | ------ | -------- | ------------------------- |
-| `assetId`       | string | Yes      | Card asset ID             |
-| `cardName`      | string | Yes      | Card name                 |
-| `linkAssetId`   | string | Yes      | Linked payment asset ID   |
-| `linkAssetName` | string | Yes      | Linked payment asset name |
-| `jungsanDay`    | number | No       | Balance calculation day   |
-| `paymentDay`    | number | No       | Payment due day           |
+| Parameter       | Type   | Required                     | Description               |
+| --------------- | ------ | ---------------------------- | ------------------------- |
+| `assetId`       | string | Yes                          | Card asset ID             |
+| `cardName`      | string | Yes                          | Card name                 |
+| `linkAssetId`   | string | Yes                          | Linked payment asset ID   |
+| `linkAssetName` | string | Yes                          | Linked payment asset name |
+| `jungsanDay`    | number | No (defaults to current day) | Balance calculation day   |
+| `paymentDay`    | number | No (defaults to current day) | Payment due day           |
+
+> ⚠️ **Omitted fields are filled from the card's current state.** The upstream API resets any card field that is not re-sent (an omitted payment day comes back empty), so the server supplies the card's existing `jungsanDay`/`paymentDay` for any day that is omitted, keeping this a partial update.
 
 **Example prompts:**
 

@@ -497,14 +497,16 @@ everywhere.
 
 **Request Parameters:**
 
-| Parameter       | Type   | Required | Description                     |
-| --------------- | ------ | -------- | ------------------------------- |
-| `cardName`      | string | Yes      | Credit card name                |
-| `linkAssetId`   | string | Yes      | Linked payment asset ID         |
-| `linkAssetName` | string | Yes      | Linked payment asset name       |
-| `notPayMoney`   | number | Yes      | Unpaid balance (negative value) |
-| `jungsanDay`    | number | No       | Balance calculation day (1-31)  |
-| `paymentDay`    | number | No       | Payment due day (1-31)          |
+| Parameter       | Type   | Required                  | Description                     |
+| --------------- | ------ | ------------------------- | ------------------------------- |
+| `cardName`      | string | Yes                       | Credit card name                |
+| `linkAssetId`   | string | Yes                       | Linked payment asset ID         |
+| `linkAssetName` | string | Yes                       | Linked payment asset name       |
+| `notPayMoney`   | number | Yes                       | Unpaid balance (negative value) |
+| `jungsanDay`    | number | Yes (in practice)         | Balance calculation day (1-31)  |
+| `paymentDay`    | number | Yes (in practice)         | Payment due day (1-31)          |
+
+> ⚠️ **Verified against a live server:** the request **hangs indefinitely** (no response, no card created) when either `jungsanDay` or `paymentDay` is omitted. Always send both fields. The MCP server's `card_create` tool defaults them to `1`.
 
 **Response Format:** JSON (success/failure indicator; does **not** include the new card's ID — discover it via the card list)
 
@@ -526,6 +528,8 @@ everywhere.
 | `linkAssetName` | string | Yes      | Linked payment asset name      |
 | `jungsanDay`    | number | No       | Balance calculation day (1-31) |
 | `paymentDay`    | number | No       | Payment due day (1-31)         |
+
+> ⚠️ **Verified against a live server:** this endpoint **resets fields that are not re-sent** rather than preserving them. Omitting `linkAssetId`/`linkAssetName` clears the link (`"0"`), omitting `paymentDay` empties it (`"null"`), and omitting `jungsanDay` resets it to `1`. Unlike `addAssetCard`, it responds quickly regardless. Always send the complete field set; the MCP server's `card_update` tool fills omitted days from the card's current state.
 
 **Response Format:** JSON (success/failure indicator)
 

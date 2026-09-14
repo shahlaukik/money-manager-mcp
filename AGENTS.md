@@ -127,6 +127,11 @@ The Money Manager HTTP API is unusual. Respect these when writing handlers:
 - **`transfer_update` does not update in place** — the server creates a new transfer with a new ID and the old one becomes invalid. The handler's result message warns about this; keep that warning.
 - **`transaction_list` can hang** on date ranges with no transactions (server bug).
   `NetworkError.timeoutForTransactionList` carries the hint in its message.
+- **`/addAssetCard` hangs forever** (no response, no card created) unless both
+  `jungsanDay` and `paymentDay` are sent; `handleCardCreate` defaults them to `1`.
+- **`/modifyCard` resets omitted fields** instead of preserving them (omitted
+  payment day comes back empty, omitted link asset is cleared); `handleCardUpdate`
+  fills omitted days from the card's current state before updating.
 - **Excel export returns HTML-based `.xls`**, not real XLSX. `.xlsx` paths are
   auto-corrected to `.xls`.
 - **Backup/restore endpoints** (`/uploadSqlFile`, `/money.sqlite`) exist upstream

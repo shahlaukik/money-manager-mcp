@@ -49,6 +49,7 @@ import {
 import type {
   AssetGroup,
   CardGroup,
+  CreditCard,
   RawAssetChartResponse,
   RawDashboardResponse,
   RawInitDataResponse,
@@ -392,6 +393,29 @@ export async function handleAssetDelete(
   };
 }
 
+/**
+ * Day-of-month from card data. Upstream serializes these fields as strings
+ * ("1", or the literal "null" after a modify omitted them), so accept numeric
+ * strings and reject anything else rather than trusting the declared type.
+ */
+function toDayValue(value: unknown): number | undefined {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 31 ? n : undefined;
+}
+
+/** Finds one card by asset id across all card groups. */
+async function findCard(
+  client: HttpClient,
+  assetId: string,
+): Promise<CreditCard | undefined> {
+  const { cardGroups } = await handleCardList(client);
+  for (const group of cardGroups) {
+    const card = group.children.find((card) => card.assetId === assetId);
+    if (card) return card;
+  }
+  return undefined;
+}
+
 /** Retrieves all credit cards in a hierarchical structure. */
 export async function handleCardList(client: HttpClient) {
   const raw = await client.get<CardGroup[]>("/getCardData");
@@ -413,13 +437,15 @@ export async function handleCardCreate(
   client: HttpClient,
   args: CardCreateInput,
 ) {
+  // Both day fields must always be sent: /addAssetCard spins forever when
+  // either is missing (verified against a live server), so they default to 1.
   const response = await client.post<ApiOperationResponse>("/addAssetCard", {
     cardName: args.cardName,
     linkAssetId: args.linkAssetId,
     linkAssetName: args.linkAssetName,
     notPayMoney: args.notPayMoney,
-    jungsanDay: args.jungsanDay,
-    paymentDay: args.paymentDay,
+    jungsanDay: args.jungsanDay ?? 1,
+    paymentDay: args.paymentDay ?? 1,
   });
   return {
     success: succeeded(response),
@@ -433,13 +459,17 @@ export async function handleCardUpdate(
   client: HttpClient,
   args: CardUpdateInput,
 ) {
+  // /modifyCard resets any field that is not re-sent (verified: omitted days
+  // come back as jungsanDay 1 / paymentDay "null"), so omitted days fall back
+  // to the card's current values to keep this a partial update.
+  const current = await findCard(client, args.assetId);
   const response = await client.post<ApiOperationResponse>("/modifyCard", {
     assetId: args.assetId,
     cardName: args.cardName,
     linkAssetId: args.linkAssetId,
     linkAssetName: args.linkAssetName,
-    jungsanDay: args.jungsanDay,
-    paymentDay: args.paymentDay,
+    jungsanDay: args.jungsanDay ?? toDayValue(current?.jungsanDay) ?? 1,
+    paymentDay: args.paymentDay ?? toDayValue(current?.paymentDay) ?? 1,
   });
   return {
     success: succeeded(response),
@@ -631,13 +661,14 @@ export const TOOLS: AnyToolDefinition[] = [
   {
     name: "card_create",
     description:
-      "Creates a new credit card. Returns {success, message} but NOT the new card ID — the upstream API does not return it. Call card_list afterward to discover the new card's id. linkAssetId/linkAssetName must be an existing payment asset from init_get_data. NOTE: there is no card_delete tool (the upstream API exposes no delete endpoint), so created cards cannot be removed programmatically.",
+      "Creates a new credit card. Returns {success, message} but NOT the new card ID — the upstream API does not return it. Call card_list afterward to discover the new card's id. linkAssetId/linkAssetName must be an existing payment asset from init_get_data. jungsanDay/paymentDay default to 1 because the upstream API hangs indefinitely when either is omitted. NOTE: there is no card_delete tool (the upstream API exposes no delete endpoint), so created cards cannot be removed programmatically.",
     schema: CardCreateInputSchema,
     handler: handleCardCreate,
   },
   {
     name: "card_update",
-    description: "Modifies an existing credit card.",
+    description:
+      "Modifies an existing credit card. Omitted jungsanDay/paymentDay keep the card's current values — the upstream API resets any field that is not re-sent, so the server fills them in from the card's state before updating.",
     schema: CardUpdateInputSchema,
     handler: handleCardUpdate,
   },
