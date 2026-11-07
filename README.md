@@ -86,6 +86,7 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 
 | Category     | Tools                                                                                |
 | ------------ | ------------------------------------------------------------------------------------ |
+| Connection   | `connection_set`                                                                     |
 | Init         | `init_get_data`                                                                      |
 | Transactions | `transaction_list`, `transaction_create`, `transaction_update`, `transaction_delete` |
 | Summaries    | `summary_get_period`, `summary_export_excel`                                         |
@@ -105,6 +106,7 @@ Once connected, just talk to your AI assistant:
 | "Transfer $200 from checking to savings"     | `transfer_create`        |
 | "Export November's transactions to Excel"    | `summary_export_excel`   |
 | "Show my net worth trend"                    | `dashboard_get_overview` |
+| "PC Manager is on port 4123 now"             | `connection_set`         |
 
 > 📖 More example prompts and multi-step workflows: [Usage Guide](docs/USAGE.md)
 

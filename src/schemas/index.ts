@@ -63,6 +63,31 @@ export const InitGetDataInputSchema = z.object({
 
 export type InitGetDataInput = z.infer<typeof InitGetDataInputSchema>;
 
+/**
+ * Input schema for connection_set tool. PC Manager picks a new port every time
+ * it starts, so the address can be changed without restarting the server.
+ */
+export const ConnectionSetInputSchema = z
+  .object({
+    port: z
+      .number()
+      .int()
+      .min(1)
+      .max(65535)
+      .optional()
+      .describe("Port shown in PC Manager, e.g. 8888"),
+    host: z
+      .string()
+      .regex(/^[A-Za-z0-9.-]+$/, "host must be an IP address or hostname")
+      .optional()
+      .describe("IP address or hostname shown in PC Manager, e.g. 192.168.1.1"),
+  })
+  .refine((v) => v.port !== undefined || v.host !== undefined, {
+    message: "Provide port, host, or both",
+  });
+
+export type ConnectionSetInput = z.infer<typeof ConnectionSetInputSchema>;
+
 // ============================================================================
 // Transaction Schemas
 // ============================================================================

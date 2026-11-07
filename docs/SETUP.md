@@ -340,6 +340,8 @@ The Money Manager app runs on your local network. Common ways to find it:
 3. Click on **Start** to start the server.
 4. Note the IP address and port displayed (e.g., `192.168.1.1:8888`).
 
+The port (and sometimes the IP) can change each time you start PC Manager. You don't need to edit your config and restart when it does: tell the AI the new address (for example "PC Manager is on port 4123 now") and it will call `connection_set`. The address in your config is only where the server starts.
+
 ## Troubleshooting
 
 ### Common Issues

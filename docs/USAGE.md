@@ -4,10 +4,11 @@ This guide covers how to use the Money Manager MCP tools with AI assistants.
 
 ## Tool Categories
 
-The MCP server provides **18 tools** organized into 7 categories:
+The MCP server provides **19 tools** organized into 8 categories:
 
 | Category       | Tools | Description                               |
 | -------------- | ----- | ----------------------------------------- |
+| Connection     | 1     | Change the server address at runtime      |
 | Initialization | 1     | Get app configuration and categories      |
 | Transactions   | 4     | Create, read, update, delete transactions |
 | Summaries      | 2     | Financial reports and Excel export        |
@@ -15,6 +16,28 @@ The MCP server provides **18 tools** organized into 7 categories:
 | Credit Cards   | 3     | Manage credit cards                       |
 | Transfers      | 2     | Move money between accounts               |
 | Dashboard      | 2     | Charts and analytics                      |
+
+---
+
+## Connection
+
+### `connection_set`
+
+Points the server at a new PC Manager address without restarting it. PC Manager picks a new port every time you start it on your phone, so tell the AI the address it shows. Whatever you leave out (host or port) stays the same. The session cookie is cleared, so the next call starts a fresh session.
+
+**Parameters** (at least one is required):
+
+| Parameter | Type   | Required | Description                         |
+| --------- | ------ | -------- | ----------------------------------- |
+| `port`    | number | No       | Port shown in PC Manager (1–65535)  |
+| `host`    | string | No       | IP address or hostname of the phone |
+
+**Returns:** `{ success, baseUrl }`
+
+**Example prompts:**
+
+- "PC Manager is on port 4123 now"
+- "The server moved to 192.168.1.42:8888"
 
 ---
 

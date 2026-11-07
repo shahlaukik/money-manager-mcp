@@ -119,6 +119,7 @@ Tools follow the pattern: `{category}_{action}` using snake_case.
 | 16  | `transfer_update`           | `/modifyMoveAsset`        | POST   |
 | 17  | `dashboard_get_overview`    | `/getDashBoardData`       | GET    |
 | 18  | `dashboard_get_asset_chart` | `/getEachAssetChartData`  | POST   |
+| 19  | `connection_set`            | — (local only)            | —      |
 
 ### Tool Registration
 
@@ -130,7 +131,7 @@ Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the `TOO
 
 `src/index.ts` is a thin bootstrap: it creates the `FastMCP` server, binds the HTTP client to each handler via closure, wraps each handler's domain-object result as JSON text content, and starts the stdio transport. There is no hand-maintained JSON Schema list and no double validation.
 
-The server also sends an `instructions` block in the MCP initialize handshake. Because end users install via `npx money-manager-mcp@latest` and never see this repository's docs, those instructions carry the critical usage contract: call `init_get_data` first (IDs are not guessable), create tools do not return new IDs, `transfer_update` does not update in place, there is no `card_delete`, and `transaction_list` can hang on empty date ranges.
+The server also sends an `instructions` block in the MCP initialize handshake. Because end users install via `npx money-manager-mcp@latest` and never see this repository's docs, those instructions carry the critical usage contract: use `connection_set` when the PC Manager address changes, call `init_get_data` first (IDs are not guessable), create tools do not return new IDs, `transfer_update` does not update in place, there is no `card_delete`, and `transaction_list` can hang on empty date ranges.
 
 ---
 
@@ -351,7 +352,7 @@ There is no automated test suite. The server is verified by:
 2. `npm run lint` — ESLint
 3. Manual testing with an MCP-compatible client (Claude Desktop, VS Code)
 
-For a full live end-to-end protocol — all 18 tools exercised with throwaway data and guaranteed cleanup — follow the `testing-money-manager-mcp` skill in `.agents/skills/testing-money-manager-mcp/SKILL.md`.
+For a full live end-to-end protocol — all 19 tools exercised with throwaway data and guaranteed cleanup — follow the `testing-money-manager-mcp` skill in `.agents/skills/testing-money-manager-mcp/SKILL.md`.
 
 Handlers are pure `(client, args) → object` functions, so they can be unit-tested against a mocked `HttpClient` without a live server, but no such tests are included.
 

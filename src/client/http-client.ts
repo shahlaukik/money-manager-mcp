@@ -117,6 +117,28 @@ export class HttpClient {
     );
   }
 
+  // ----------------------------------------------------------------- address
+
+  /** The Money Manager server address currently in use. */
+  getBaseUrl(): string {
+    return this.config.server.baseUrl;
+  }
+
+  /**
+   * Points the client at a new server address (PC Manager picks a new port on
+   * every start). Cookies are cleared because they are scoped by host, not
+   * port, and the old session belongs to the previous server run.
+   */
+  async setBaseUrl(baseUrl: string): Promise<void> {
+    this.config.server.baseUrl = baseUrl;
+    this.client.defaults.baseURL = `${baseUrl}/moneyBook`;
+    await this.cookieJar.removeAllCookies();
+    if (this.config.session?.persist) {
+      this.saveCookies();
+    }
+    this.log("info", `Base URL changed to: ${baseUrl}`);
+  }
+
   // ---------------------------------------------------------------- GET / POST
 
   /**
