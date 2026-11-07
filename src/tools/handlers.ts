@@ -24,6 +24,8 @@ import {
   CardListInputSchema,
   CardUpdateInputSchema,
   type CardUpdateInput,
+  ConnectionSetInputSchema,
+  type ConnectionSetInput,
   DashboardGetAssetChartInputSchema,
   type DashboardGetAssetChartInput,
   DashboardGetOverviewInputSchema,
@@ -143,6 +145,18 @@ export async function handleInitGetData(
     assetGroups: raw.assetGroups || [],
     assetNames: raw.assetNames || [],
   };
+}
+
+/** Changes the server address at runtime; keeps whichever part is omitted. */
+export async function handleConnectionSet(
+  client: HttpClient,
+  args: ConnectionSetInput,
+) {
+  const url = new URL(client.getBaseUrl());
+  if (args.host !== undefined) url.hostname = args.host;
+  if (args.port !== undefined) url.port = String(args.port);
+  await client.setBaseUrl(url.origin);
+  return { success: true, baseUrl: client.getBaseUrl() };
 }
 
 /** Lists transactions within a date range (handles three XML empty-edge cases). */
@@ -581,6 +595,13 @@ type AnyToolDefinition = ToolDefinition<unknown>;
  * type — each entry is fully type-checked against its own schema's input above.
  */
 export const TOOLS: AnyToolDefinition[] = [
+  {
+    name: "connection_set",
+    description:
+      "Points the server at the Money Manager PC Manager address shown on the phone, without a restart. PC Manager picks a new port every time it starts, so use this when the user gives a new port or IP, or when calls fail with a connection error. Pass only `port` to keep the current host. Returns the active base URL; the next call starts a fresh session.",
+    schema: ConnectionSetInputSchema,
+    handler: handleConnectionSet,
+  },
   {
     name: "init_get_data",
     description:

@@ -6,7 +6,7 @@ Guidance for AI coding agents (Claude, Copilot, ZCode, etc.) working in this rep
 
 Money Manager MCP is a **Model Context Protocol** server that lets AI assistants manage personal finances through the **Realbyte Money Manager** Android app's "PC Manager" web server (a local-network HTTP service).
 
-The server runs over **stdio** and exposes **18 tools** (no resources, no prompts). It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in TypeScript (strict mode, ESM, Node ≥ 22).
+The server runs over **stdio** and exposes **19 tools** (no resources, no prompts). It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in TypeScript (strict mode, ESM, Node ≥ 22).
 
 A phone running the Money Manager app and the computer running the server must be on the **same Wi-Fi network**. There is no automated test suite.
 

@@ -1,6 +1,6 @@
 ---
 name: testing-money-manager-mcp
-description: Full end-to-end verification of the Money Manager MCP server against the live upstream API — exercises all 18 tools with throwaway data, then verifies cleanup restored the original state. Use after changing server code (tools, schemas, HTTP client, config) and before merging. Read-only for the user's real data; all mutations happen on test assets that are deleted afterward.
+description: Full end-to-end verification of the Money Manager MCP server against the live upstream API — exercises all 19 tools with throwaway data, then verifies cleanup restored the original state. Use after changing server code (tools, schemas, HTTP client, config) and before merging. Read-only for the user's real data; all mutations happen on test assets that are deleted afterward.
 ---
 
 # Testing Money Manager MCP end-to-end
@@ -13,7 +13,7 @@ tools before starting (`mcp__<server-name>__<tool-name>`).
 
 There is no test runner and no CI. This live protocol IS the verification.
 
-## Tool coverage checklist (all 18 — the final report must account for each)
+## Tool coverage checklist (all 19 — the final report must account for each)
 
 | #   | Tool                        | Where exercised                                    |
 | --- | --------------------------- | -------------------------------------------------- |
@@ -35,6 +35,7 @@ There is no test runner and no CI. This live protocol IS the verification.
 | 16  | `transfer_update`           | Phase 5                                            |
 | 17  | `dashboard_get_overview`    | Phase 1                                            |
 | 18  | `dashboard_get_asset_chart` | Phase 1                                            |
+| 19  | `connection_set`            | Error message check (cases 4–5)                    |
 
 `card_create`/`card_update` are consent-gated (Phase 6 — ask the user,
 recommended default: proceed). A user-declined skip with reason satisfies
@@ -110,6 +111,12 @@ reaches the upstream server and no data is touched:
    `mbid`, `outputPath: "export.txt"`) must fail with "outputPath must end
    in .xls or .xlsx (other extensions are not allowed)" — another
    server-side Zod refine in the same family as the traversal rule.
+4. `connection_set` with no arguments must fail with "Provide port, host,
+   or both".
+5. `connection_set` with only `port` set to the port the server is already
+   on must return `{success: true, baseUrl}` with that same URL, and a
+   following `init_get_data` must still succeed (the cleared session is
+   re-established transparently).
 
 ## Phase 2 — Export
 

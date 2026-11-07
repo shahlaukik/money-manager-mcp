@@ -71,6 +71,7 @@ async function main(): Promise<void> {
     // (end users install via `npx money-manager-mcp@latest`). Keep concise.
     instructions: [
       "Personal-finance server backed by the Realbyte Money Manager Android app's PC Manager web server (same-Wi-Fi, single book).",
+      "The PC Manager port changes every time the user starts it on their phone: if they give a new address, or calls fail with a network error, call `connection_set` (ask the user for the port if unknown).",
       "ALWAYS call `init_get_data` first: it returns the `mbid` plus the category IDs (`mcid`), payment-type names, and asset group IDs that the create/update/transfer tools require. These IDs are not guessable and most create/update failures come from using a wrong/imagined ID.",
       "The four create tools — `transaction_create`, `asset_create`, `card_create`, `transfer_create` — return `{success, message}` with NO new id (upstream API limitation). To get the id of what you just created, call the matching `_list` tool afterward.",
       "`transfer_update` does NOT update in place: the server creates a NEW transfer with a NEW id and invalidates the old one. Find the new id via `transaction_list` filtered by the source asset and date (look for the inOutCode '3' Transfer-Out row).",
