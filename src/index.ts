@@ -15,6 +15,7 @@
 import { FastMCP, type ContentResult } from "fastmcp";
 
 import { loadConfig, type Config } from "./config/index.js";
+import { loadPersistedConnection } from "./config/state.js";
 import { createHttpClient, type HttpClient } from "./client/http-client.js";
 import { TOOLS } from "./tools/handlers.js";
 
@@ -58,7 +59,12 @@ async function main(): Promise<void> {
 
   const cliBaseUrl = parseBaseUrlArg();
   const config: Config = await loadConfig({ baseUrl: cliBaseUrl });
-  log(`Base URL: ${config.server.baseUrl}`);
+  // Startup precedence: CLI/env/config file first; fall back to the address
+  // persisted by connection_set so sessions start where the last one ended.
+  if (!config.server.baseUrl) {
+    config.server.baseUrl = (await loadPersistedConnection())?.baseUrl;
+  }
+  log(`Base URL: ${config.server.baseUrl ?? "(not configured)"}`);
 
   const httpClient = await createHttpClient(config);
   log("HTTP client initialized.");

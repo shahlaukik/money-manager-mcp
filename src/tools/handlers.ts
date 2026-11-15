@@ -154,9 +154,22 @@ export async function handleConnectionSet(
   client: HttpClient,
   args: ConnectionSetInput,
 ) {
-  const url = new URL(client.getBaseUrl());
-  if (args.host !== undefined) url.hostname = args.host;
-  if (args.port !== undefined) url.port = String(args.port);
+  const current = client.getBaseUrl();
+  let url: URL;
+  if (current) {
+    url = new URL(current);
+    if (args.host !== undefined) url.hostname = args.host;
+    if (args.port !== undefined) url.port = String(args.port);
+  } else if (args.host !== undefined && args.port !== undefined) {
+    // First connection: with no current address, both parts are needed.
+    url = new URL(`http://${args.host}:${args.port}`);
+  } else {
+    throw new NetworkError(
+      "No PC Manager address is configured yet: provide both host and port " +
+        "(both are shown on the phone's PC Manager screen).",
+      false,
+    );
+  }
 
   // Verify before committing: a typo'd port must fail here — with the current
   // address retained — rather than "succeeding" and break every later call.
@@ -166,7 +179,7 @@ export async function handleConnectionSet(
     const reason = error instanceof Error ? error.message : String(error);
     throw new NetworkError(
       `Could not reach a Money Manager server at ${url.origin} (${reason}). ` +
-        `Keeping the current address ${client.getBaseUrl()}.`,
+        `Keeping the current address ${current ?? "(none)"}.`,
       false,
     );
   }
@@ -616,7 +629,7 @@ export const TOOLS: AnyToolDefinition[] = [
   {
     name: "connection_set",
     description:
-      "Points the server at the Money Manager PC Manager address shown on the phone, without a restart. PC Manager picks a new port every time it starts, so use this when the user gives a new port or IP, or when calls fail with a connection error. Pass only `port` to keep the current host. The new address is verified first — if unreachable, the current address is kept and the call fails — and a successful switch is remembered across sessions. Returns the active base URL; the next call starts a fresh session.",
+      "Points the server at the Money Manager PC Manager address shown on the phone, without a restart. PC Manager picks a new port every time it starts, so use this when the user gives a new port or IP, or when calls fail with a connection error. When no address is configured yet, provide both host and port; afterwards pass only what changed. The new address is verified first — if unreachable, the current address is kept and the call fails — and a successful switch is remembered across sessions. Returns the active base URL; the next call starts a fresh session.",
     schema: ConnectionSetInputSchema,
     handler: handleConnectionSet,
   },

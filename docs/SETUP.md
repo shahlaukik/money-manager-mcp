@@ -47,7 +47,7 @@ This guide covers installation and configuration of the Money Manager MCP server
 
 ### Command Line Arguments (Recommended)
 
-The simplest way to configure the server is via the `--baseUrl` argument:
+The `--baseUrl` argument is optional: without any configured address the server still starts, and the AI establishes the connection on first use (via `connection_set` — the verified address is then remembered across sessions, so this is a one-time step). Providing it up front simply skips that step:
 
 ```bash
 npx money-manager-mcp@latest --baseUrl http://192.168.1.1:8888
@@ -58,7 +58,8 @@ npx money-manager-mcp@latest --baseUrl http://192.168.1.1:8888
 Alternatively, you can use environment variables. Create a `.env` file or set them in your MCP client config:
 
 ```bash
-# Required: Base URL of your Money Manager server
+# Optional: Base URL of your Money Manager server (omit for a zero-config
+# start — the AI connects on first use and the address is remembered)
 MONEY_MANAGER_BASE_URL=http://your-server-ip:port
 
 # Optional: Request timeout in milliseconds (default: 30000)
@@ -82,7 +83,10 @@ The server reads configuration in this order (highest priority first):
 1. **Command line arguments** (`--baseUrl`)
 2. **Environment variables** (`MONEY_MANAGER_BASE_URL`)
 3. **Configuration file** (`.money-manager-mcp.json`)
-4. **Schema defaults**
+4. **Persisted address** (the last one verified by `connection_set`, stored in your per-user config directory)
+5. **Schema defaults**
+
+Without a configured address the server starts unconfigured; the first tool call then fails with a clear message telling the AI to ask you for the address shown in PC Manager (or discover it on the network) and pass it to `connection_set`.
 
 ### Configuration File (Alternative)
 
@@ -109,7 +113,7 @@ You can also use a `.money-manager-mcp.json` file in your working directory. Any
 
 | Key                  | Default                 | Description                                                              |
 | -------------------- | ----------------------- | ------------------------------------------------------------------------ |
-| `server.baseUrl`     | — (required)            | Money Manager server address (`http://` or `https://`)                   |
+| `server.baseUrl`     | — (optional)            | Money Manager server address (`http://` or `https://`)                   |
 | `server.timeout`     | `30000`                 | Request timeout in milliseconds (1000–120000)                            |
 | `server.retryCount`  | `3`                     | Retry attempts for failed read requests (0–10); writes are never retried |
 | `server.retryDelay`  | `1000`                  | Base delay in milliseconds for the exponential-backoff retry             |

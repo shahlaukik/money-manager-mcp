@@ -46,7 +46,7 @@ npm run lint     # ESLint
 npm run format   # Prettier
 ```
 
-The server requires a base URL (the only required setting). In development pass it as a flag:
+The base URL is optional — without it the server starts unconfigured and the AI establishes the connection on first use (`connection_set` verifies and remembers the address). In development pass it as a flag:
 
 ```bash
 npm run dev -- --baseUrl http://192.168.1.1:8888

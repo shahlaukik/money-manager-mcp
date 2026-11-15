@@ -75,9 +75,12 @@ export class HttpClient {
       await this.loadCookies();
     }
 
+    const baseUrl = this.config.server.baseUrl;
     this.client = wrapper(
       axios.create({
-        baseURL: `${this.config.server.baseUrl}/moneyBook`,
+        // Empty until connection_set establishes an address; requests are
+        // blocked by the not-configured guard long before the URL is used.
+        baseURL: baseUrl ? `${baseUrl}/moneyBook` : "",
         timeout: this.config.server.timeout,
         jar: this.cookieJar,
         maxContentLength: MAX_RESPONSE_BYTES,
@@ -119,8 +122,8 @@ export class HttpClient {
 
   // ----------------------------------------------------------------- address
 
-  /** The Money Manager server address currently in use. */
-  getBaseUrl(): string {
+  /** The Money Manager server address currently in use, if one is. */
+  getBaseUrl(): string | undefined {
     return this.config.server.baseUrl;
   }
 
@@ -263,6 +266,15 @@ export class HttpClient {
     requestFn: () => Promise<AxiosResponse<T>>,
     idempotent = false,
   ): Promise<AxiosResponse<T>> {
+    if (!this.config.server.baseUrl) {
+      throw new NetworkError(
+        "No PC Manager address is configured. Ask the user for the IP and " +
+          "port shown in the PC Manager app on their phone, then call " +
+          "`connection_set` with host and port.",
+        false,
+      );
+    }
+
     const maxRetries = idempotent ? this.config.server.retryCount : 0;
     let lastError: McpError | undefined;
 
@@ -297,7 +309,9 @@ export class HttpClient {
       // Network errors (no response received)
       if (!axiosError.response) {
         if (axiosError.code === "ECONNREFUSED") {
-          throw NetworkError.connectionRefused(this.config.server.baseUrl);
+          throw NetworkError.connectionRefused(
+            this.config.server.baseUrl ?? "(no address)",
+          );
         }
         if (
           axiosError.code === "ETIMEDOUT" ||
@@ -316,7 +330,7 @@ export class HttpClient {
         }
         if (axiosError.code === "ENOTFOUND") {
           throw NetworkError.unreachable(
-            this.config.server.baseUrl,
+            this.config.server.baseUrl ?? "(no address)",
             axiosError.message,
           );
         }
