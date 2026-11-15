@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   }
   log(`Base URL: ${config.server.baseUrl ?? "(not configured)"}`);
 
-  const httpClient = await createHttpClient(config);
+  const httpClient = createHttpClient(config);
   log("HTTP client initialized.");
 
   const server = new FastMCP({

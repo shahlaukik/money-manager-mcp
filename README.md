@@ -18,7 +18,7 @@ An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants manage
 - **Transfers** — move money between accounts
 - **Reports & export** — period summaries and Excel export
 - **Dashboard** — net-worth trends and portfolio breakdown
-- **Session persistence** — stays logged in across restarts
+- **Zero-config connection** — the AI finds your phone on the network (`connection_discover`), verifies the address before switching, and remembers it across sessions
 
 ## 🆕 What's new in v2.0.0
 

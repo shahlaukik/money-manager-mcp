@@ -33,14 +33,6 @@ export const ConfigSchema = z.object({
     retryCount: z.number().min(0).max(10).default(3),
     retryDelay: z.number().min(100).max(10000).default(1000),
   }),
-  session: z
-    .object({
-      persist: z.boolean().default(true),
-      cookieFile: z.string().default(".session-cookies.json"),
-    })
-    // prefault: the `{}` input is parsed so the field-level defaults apply
-    // (zod v4's `.default()` would require the fully-resolved output shape).
-    .prefault({}),
   discovery: z
     .object({
       // Ports the PC Manager app is known to use; scanned by
@@ -133,11 +125,6 @@ function loadEnvConfig(): Record<string, unknown> {
   const logLevel = process.env["MONEY_MANAGER_LOG_LEVEL"];
   if (logLevel) {
     deepSet(config, "logging.level", logLevel);
-  }
-
-  const sessionPersist = process.env["MONEY_MANAGER_SESSION_PERSIST"];
-  if (sessionPersist) {
-    deepSet(config, "session.persist", sessionPersist === "true");
   }
 
   const discoveryPorts = process.env["MONEY_MANAGER_DISCOVERY_PORTS"];

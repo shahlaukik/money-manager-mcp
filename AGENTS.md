@@ -94,7 +94,7 @@ Layered (highest priority first), all funneled through one Zod schema in `src/co
 3. `.money-manager-mcp.json` in the working directory
 4. Schema defaults
 
-Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`, `MONEY_MANAGER_RETRY_COUNT`, `MONEY_MANAGER_LOG_LEVEL`, `MONEY_MANAGER_SESSION_PERSIST`, `MONEY_MANAGER_DISCOVERY_PORTS` (ports scanned by `connection_discover`), `MONEY_MANAGER_STATE_DIR` (overrides the per-user state dir for the persisted address). When no address is configured anywhere, startup falls back to the last address verified by `connection_set` (state file `connection.json`).
+Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`, `MONEY_MANAGER_RETRY_COUNT`, `MONEY_MANAGER_LOG_LEVEL`, `MONEY_MANAGER_DISCOVERY_PORTS` (ports scanned by `connection_discover`), `MONEY_MANAGER_STATE_DIR` (overrides the per-user state dir for the persisted address). When no address is configured anywhere, startup falls back to the last address verified by `connection_set` (state file `connection.json`). Session cookies are kept in an in-memory jar only — there is no cookie disk persistence (the live upstream server sets no cookies).
 
 ## Coding Conventions
 
@@ -154,8 +154,8 @@ The Money Manager HTTP API is unusual. Respect these when writing handlers:
 - No new runtime dependencies without a clear need; the dependency list is intentionally small.
 - No `any`, no `@ts-ignore`, no loosening strict flags.
 - Don't expose the backup/restore endpoints as tools.
-- Don't commit `.env`, `.session-cookies.json`, `*.xls`/`*.xlsx`, or the local
-  `.github/prompts/` directory (all gitignored).
+- Don't commit `.env`, `*.xls`/`*.xlsx`, or the local `.github/prompts/`
+  directory (all gitignored).
 
 ## Project Philosophy
 

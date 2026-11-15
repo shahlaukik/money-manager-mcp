@@ -72,9 +72,6 @@ MONEY_MANAGER_RETRY_COUNT=3
 # Optional: Log level (debug|info|warn|error) (default: info)
 MONEY_MANAGER_LOG_LEVEL=info
 
-# Optional: Whether to persist session cookies across restarts (default: true)
-MONEY_MANAGER_SESSION_PERSIST=true
-
 # Optional: Ports scanned by connection_discover, comma-separated
 # (default: 8888,6200,7200,8200,9200 — the ports the PC Manager app uses)
 MONEY_MANAGER_DISCOVERY_PORTS=8888,6200,7200,8200,9200
@@ -113,10 +110,6 @@ You can also use a `.money-manager-mcp.json` file in your working directory. Any
     "level": "info",
     "format": "json"
   },
-  "session": {
-    "persist": true,
-    "cookieFile": ".session-cookies.json"
-  },
   "discovery": {
     "ports": [8888, 6200, 7200, 8200, 9200]
   }
@@ -131,13 +124,9 @@ You can also use a `.money-manager-mcp.json` file in your working directory. Any
 | `server.retryDelay`  | `1000`                  | Base delay in milliseconds for the exponential-backoff retry             |
 | `logging.level`      | `info`                  | `debug` \| `info` \| `warn` \| `error`                                   |
 | `logging.format`     | `json`                  | Log line format written to stderr: `json` or `text`                      |
-| `session.persist`    | `true`                  | Persist session cookies across restarts                                  |
-| `session.cookieFile` | `.session-cookies.json` | Cookie file path, relative to the working directory                      |
 | `discovery.ports`    | `[8888, 6200, 7200, 8200, 9200]` | Ports scanned by `connection_discover`                        |
 
-> `retryDelay`, `logging.format`, and `session.cookieFile` can only be set through the config file (there are no environment variables for them).
-
-When session persistence is enabled, the server saves its session cookies to the configured cookie file in the working directory so it can reuse the login across restarts. The file is gitignored and created only after the first successful request.
+> `retryDelay` and `logging.format` can only be set through the config file (there are no environment variables for them).
 
 ## MCP Client Setup
 
@@ -366,14 +355,14 @@ The port (and sometimes the IP) can change each time you start PC Manager. You d
 #### "Cannot connect to Money Manager server"
 
 - Verify the server URL is correct
-- Check if the Money Manager app is running
-- Ensure network connectivity between your machine and the server
+- Check if the Money Manager app is running (PC Manager started on the phone)
+- Ensure both devices are on the same Wi-Fi network
+- Ask the AI to "find my Money Manager on the network" — `connection_discover` re-locates it after the phone's IP or port changed
 
 #### "Session expired" errors
 
-- The server auto-manages sessions
+- The server auto-manages sessions; sessions are re-established automatically on the next call
 - Try restarting the MCP server
-- Check `MONEY_MANAGER_SESSION_PERSIST` is set to `true`
 
 #### "outputPath must end in .xls or .xlsx (other extensions are not allowed)"
 

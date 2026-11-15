@@ -142,8 +142,7 @@ The server also sends an `instructions` block in the MCP initialize handshake. B
 
 The HTTP client (`src/client/http-client.ts`) handles:
 
-- **Session Management**: Maintains cookies across requests using `tough-cookie`
-- **Cookie Persistence**: Optionally saves/loads session cookies to `.session-cookies.json` (written with owner-only permissions; unchanged state is never rewritten)
+- **Session Management**: Maintains cookies across requests using `tough-cookie` (in-memory jar; the live PC Manager server currently sets no cookies, so nothing is persisted to disk — any future session cookie is handled transparently per process)
 - **Retry Logic**: Configurable, exponential-backoff retry for failed **read** requests only — a timed-out write may already have been applied upstream, so POSTs run single-shot to avoid duplicating a financial write
 - **Timeout Handling**: Configurable request timeouts
 - **Response Size Cap**: Responses over 25 MiB are rejected (legitimate responses are far smaller)
@@ -238,13 +237,12 @@ Configuration is defined by a single Zod schema (`src/config/index.ts`), which i
 | `MONEY_MANAGER_TIMEOUT`         | No       | 30000   | Request timeout (ms)           |
 | `MONEY_MANAGER_RETRY_COUNT`     | No       | 3       | Retry attempts                 |
 | `MONEY_MANAGER_LOG_LEVEL`       | No       | info    | Log level                      |
-| `MONEY_MANAGER_SESSION_PERSIST` | No       | true    | Persist cookies                |
 | `MONEY_MANAGER_DISCOVERY_PORTS` | No       | 8888,6200,7200,8200,9200 | Ports scanned by `connection_discover` |
 | `MONEY_MANAGER_STATE_DIR`       | No       | per-user config dir | Directory for the persisted connection address |
 
 The server address is optional at startup — with none configured, the first tool call fails with a message telling the model to discover or ask for the address and set it via `connection_set`, which verifies it and persists it for later sessions.
 
-A few settings have no environment variable and can only be set through the config file: `server.retryDelay` (base delay for the exponential-backoff retry, default 1000 ms), `logging.format` (`json` or `text`, default `json`), and `session.cookieFile` (default `.session-cookies.json`). The full key reference is in [SETUP.md](../SETUP.md).
+A few settings have no environment variable and can only be set through the config file: `server.retryDelay` (base delay for the exponential-backoff retry, default 1000 ms) and `logging.format` (`json` or `text`, default `json`). The full key reference is in [SETUP.md](../SETUP.md).
 
 ### Configuration Priority
 
@@ -268,16 +266,14 @@ Highest priority first:
 
 ### Implemented Security Measures
 
-1. **No Credential Storage**: API uses session cookies only
-2. **Cookie Persistence**: Session cookies stored locally with owner-only file permissions (excluded from git)
-3. **Input Validation**: All tool inputs validated with Zod schemas
+1. **No Credential Storage**: API uses session cookies only, kept in memory (never written to disk)
+2. **Input Validation**: All tool inputs validated with Zod schemas
 4. **Export Confinement**: `summary_export_excel`'s `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the server's working directory — other extensions, absolute paths, `..` traversal, and symlinks (including dangling ones) pointing outside it are rejected during input validation and re-checked immediately before the file is written. The write goes through an exclusive temp file and an atomic rename, so a symlink planted between validation and write is replaced rather than followed
 5. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
 
 ### Files Excluded from Repository
 
 - `.env` - Environment configuration
-- `.session-cookies.json` - Session data
 - `*.xls`, `*.xlsx` - Exported financial data
 
 ---
