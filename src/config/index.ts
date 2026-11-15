@@ -19,20 +19,25 @@ try {
  * override anything else).
  */
 export const ConfigSchema = z.object({
-  server: z.object({
-    // http(s) only: axios cannot speak other schemes, and rejecting them here
-    // gives a clear validation error instead of a confusing request failure.
-    // Optional: without it the server starts unconfigured and connection_set
-    // (or a persisted address from a previous session) establishes it.
-    baseUrl: z
-      .string()
-      .url()
-      .regex(/^https?:\/\//, "baseUrl must start with http:// or https://")
-      .optional(),
-    timeout: z.number().min(1000).max(120000).default(30000),
-    retryCount: z.number().min(0).max(10).default(3),
-    retryDelay: z.number().min(100).max(10000).default(1000),
-  }),
+  server: z
+    .object({
+      // http(s) only: axios cannot speak other schemes, and rejecting them
+      // here gives a clear validation error instead of a confusing request
+      // failure. Optional: without it the server starts unconfigured and
+      // connection_set (or a persisted address from a previous session)
+      // establishes it.
+      baseUrl: z
+        .string()
+        .url()
+        .regex(/^https?:\/\//, "baseUrl must start with http:// or https://")
+        .optional(),
+      timeout: z.number().min(1000).max(120000).default(30000),
+      retryCount: z.number().min(0).max(10).default(3),
+      retryDelay: z.number().min(100).max(10000).default(1000),
+    })
+    // prefault: a fully empty config (no file/env/CLI) parses with the
+    // field-level defaults applying — the zero-config start.
+    .prefault({}),
   discovery: z
     .object({
       // Ports the PC Manager app is known to use; scanned by
