@@ -9,8 +9,13 @@
 
 import type { z } from "zod";
 
+import {
+  checkMoneyManagerAt,
+  discoverMoneyManagers,
+} from "../client/discovery.js";
 import type { HttpClient } from "../client/http-client.js";
-import { FileError, wrapError } from "../errors/index.js";
+import { savePersistedConnection } from "../config/state.js";
+import { FileError, NetworkError, wrapError } from "../errors/index.js";
 import {
   AssetCreateInputSchema,
   type AssetCreateInput,
@@ -24,6 +29,10 @@ import {
   CardListInputSchema,
   CardUpdateInputSchema,
   type CardUpdateInput,
+  ConnectionSetInputSchema,
+  type ConnectionSetInput,
+  ConnectionDiscoverInputSchema,
+  type ConnectionDiscoverInput,
   DashboardGetAssetChartInputSchema,
   type DashboardGetAssetChartInput,
   DashboardGetOverviewInputSchema,
@@ -143,6 +152,67 @@ export async function handleInitGetData(
     assetGroups: raw.assetGroups || [],
     assetNames: raw.assetNames || [],
   };
+}
+
+/** Changes the server address at runtime; keeps whichever part is omitted. */
+export async function handleConnectionSet(
+  client: HttpClient,
+  args: ConnectionSetInput,
+) {
+  const current = client.getBaseUrl();
+  let url: URL;
+  if (current) {
+    url = new URL(current);
+    if (args.host !== undefined) url.hostname = args.host;
+    if (args.port !== undefined) url.port = String(args.port);
+  } else if (args.host !== undefined && args.port !== undefined) {
+    // First connection: with no current address, both parts are needed.
+    url = new URL(`http://${args.host}:${args.port}`);
+  } else {
+    throw new NetworkError(
+      "No PC Manager address is configured yet: provide both host and port " +
+        "(both are shown on the phone's PC Manager screen).",
+      false,
+    );
+  }
+
+  // Verify before committing: a typo'd port must fail here — with the current
+  // address retained — rather than "succeeding" and break every later call.
+  try {
+    await checkMoneyManagerAt(url.origin);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new NetworkError(
+      `Could not reach a Money Manager server at ${url.origin} (${reason}). ` +
+        `Keeping the current address ${current ?? "(none)"}.`,
+      false,
+    );
+  }
+
+  await client.setBaseUrl(url.origin);
+  // Remember the verified address so future sessions start connected to it.
+  await savePersistedConnection(url.origin);
+  return { success: true, baseUrl: client.getBaseUrl() };
+}
+
+/** Scans the local network for verified Money Manager servers (read-only). */
+export async function handleConnectionDiscover(
+  client: HttpClient,
+  args: ConnectionDiscoverInput,
+) {
+  const ports = args.ports ?? client.getDiscoveryPorts();
+  const candidates = await discoverMoneyManagers(ports);
+  if (candidates.length === 0) {
+    return {
+      success: true,
+      candidates,
+      message:
+        "No Money Manager server found on the local network. Ask the user " +
+        "for the IP and port shown in the PC Manager app on their phone, " +
+        "then call `connection_set` with host and port.",
+    };
+  }
+  return { success: true, candidates };
 }
 
 /** Lists transactions within a date range (handles three XML empty-edge cases). */
@@ -581,6 +651,20 @@ type AnyToolDefinition = ToolDefinition<unknown>;
  * type — each entry is fully type-checked against its own schema's input above.
  */
 export const TOOLS: AnyToolDefinition[] = [
+  {
+    name: "connection_set",
+    description:
+      "Points the server at the Money Manager PC Manager address shown on the phone, without a restart. PC Manager picks a new port every time it starts, so use this when the user gives a new port or IP, or when calls fail with a connection error. When no address is configured yet, provide both host and port; afterwards pass only what changed. The new address is verified first — if unreachable, the current address is kept and the call fails — and a successful switch is remembered across sessions. Returns the active base URL; the next call starts a fresh session.",
+    schema: ConnectionSetInputSchema,
+    handler: handleConnectionSet,
+  },
+  {
+    name: "connection_discover",
+    description:
+      "Scans the local network for Money Manager PC Manager servers (each local /24 subnet on the ports the app uses) and verifies every hit against /moneyBook/getInitData, so only real Money Manager servers are reported. Read-only. With exactly one candidate, call `connection_set` with its host and port; with several, list them and ask the user which is theirs; with none, ask the user for the address shown in the PC Manager app.",
+    schema: ConnectionDiscoverInputSchema,
+    handler: handleConnectionDiscover,
+  },
   {
     name: "init_get_data",
     description:

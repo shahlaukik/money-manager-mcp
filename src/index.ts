@@ -15,6 +15,7 @@
 import { FastMCP, type ContentResult } from "fastmcp";
 
 import { loadConfig, type Config } from "./config/index.js";
+import { loadPersistedConnection } from "./config/state.js";
 import { createHttpClient, type HttpClient } from "./client/http-client.js";
 import { TOOLS } from "./tools/handlers.js";
 
@@ -58,9 +59,14 @@ async function main(): Promise<void> {
 
   const cliBaseUrl = parseBaseUrlArg();
   const config: Config = await loadConfig({ baseUrl: cliBaseUrl });
-  log(`Base URL: ${config.server.baseUrl}`);
+  // Startup precedence: CLI/env/config file first; fall back to the address
+  // persisted by connection_set so sessions start where the last one ended.
+  if (!config.server.baseUrl) {
+    config.server.baseUrl = (await loadPersistedConnection())?.baseUrl;
+  }
+  log(`Base URL: ${config.server.baseUrl ?? "(not configured)"}`);
 
-  const httpClient = await createHttpClient(config);
+  const httpClient = createHttpClient(config);
   log("HTTP client initialized.");
 
   const server = new FastMCP({
@@ -71,6 +77,7 @@ async function main(): Promise<void> {
     // (end users install via `npx money-manager-mcp@latest`). Keep concise.
     instructions: [
       "Personal-finance server backed by the Realbyte Money Manager Android app's PC Manager web server (same-Wi-Fi, single book).",
+      "The PC Manager address (IP and especially port) changes whenever the user restarts it on their phone. When tools fail with a network error, or no address is configured: call `connection_discover` to scan the local network; with exactly one candidate call `connection_set` with its host and port (tell the user which address you connected to); with several candidates ask the user to pick; with none, or if the user already knows it, call `connection_set` with the address from the user. `connection_set` verifies the address — keeping the current one if unreachable — and remembers it for future sessions.",
       "ALWAYS call `init_get_data` first: it returns the `mbid` plus the category IDs (`mcid`), payment-type names, and asset group IDs that the create/update/transfer tools require. These IDs are not guessable and most create/update failures come from using a wrong/imagined ID.",
       "The four create tools — `transaction_create`, `asset_create`, `card_create`, `transfer_create` — return `{success, message}` with NO new id (upstream API limitation). To get the id of what you just created, call the matching `_list` tool afterward.",
       "`transfer_update` does NOT update in place: the server creates a NEW transfer with a NEW id and invalidates the old one. Find the new id via `transaction_list` filtered by the source asset and date (look for the inOutCode '3' Transfer-Out row).",

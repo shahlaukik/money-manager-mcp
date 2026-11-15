@@ -119,6 +119,8 @@ Tools follow the pattern: `{category}_{action}` using snake_case.
 | 16  | `transfer_update`           | `/modifyMoveAsset`        | POST   |
 | 17  | `dashboard_get_overview`    | `/getDashBoardData`       | GET    |
 | 18  | `dashboard_get_asset_chart` | `/getEachAssetChartData`  | POST   |
+| 19  | `connection_set`            | — (local only)            | —      |
+| 20  | `connection_discover`       | `/getInitData` (probe)    | GET    |
 
 ### Tool Registration
 
@@ -130,7 +132,7 @@ Each tool is defined **once** in `src/tools/handlers.ts` as an entry in the `TOO
 
 `src/index.ts` is a thin bootstrap: it creates the `FastMCP` server, binds the HTTP client to each handler via closure, wraps each handler's domain-object result as JSON text content, and starts the stdio transport. There is no hand-maintained JSON Schema list and no double validation.
 
-The server also sends an `instructions` block in the MCP initialize handshake. Because end users install via `npx money-manager-mcp@latest` and never see this repository's docs, those instructions carry the critical usage contract: call `init_get_data` first (IDs are not guessable), create tools do not return new IDs, `transfer_update` does not update in place, there is no `card_delete`, and `transaction_list` can hang on empty date ranges.
+The server also sends an `instructions` block in the MCP initialize handshake. Because end users install via `npx money-manager-mcp@latest` and never see this repository's docs, those instructions carry the critical usage contract: discover or ask for the PC Manager address and set it via `connection_set` when it changes or is unconfigured, call `init_get_data` first (IDs are not guessable), create tools do not return new IDs, `transfer_update` does not update in place, there is no `card_delete`, and `transaction_list` can hang on empty date ranges.
 
 ---
 
@@ -140,12 +142,19 @@ The server also sends an `instructions` block in the MCP initialize handshake. B
 
 The HTTP client (`src/client/http-client.ts`) handles:
 
-- **Session Management**: Maintains cookies across requests using `tough-cookie`
-- **Cookie Persistence**: Optionally saves/loads session cookies to `.session-cookies.json` (written with owner-only permissions; unchanged state is never rewritten)
+- **Session Management**: Maintains cookies across requests using `tough-cookie` (in-memory jar; the live PC Manager server currently sets no cookies, so nothing is persisted to disk — any future session cookie is handled transparently per process)
 - **Retry Logic**: Configurable, exponential-backoff retry for failed **read** requests only — a timed-out write may already have been applied upstream, so POSTs run single-shot to avoid duplicating a financial write
 - **Timeout Handling**: Configurable request timeouts
 - **Response Size Cap**: Responses over 25 MiB are rejected (legitimate responses are far smaller)
 - **Response Parsing**: Handles JavaScript object literals and XML responses
+
+### 4.1a Discovery & Address Management
+
+`src/client/discovery.ts` verifies and finds PC Manager servers:
+
+- **Verification probe** (`checkMoneyManagerAt`): a GET to `/getInitData` must return 200 — "port is open" is not enough, since printers and router admin panels share these ports. `connection_set` probes the new address before committing the switch, so a typo fails the call and keeps the current address.
+- **LAN scan** (`discoverMoneyManagers`, used by `connection_discover`): each non-internal IPv4 interface's local /24 is probed on the configured port set (`discovery.ports`, defaulting to the ports the PC Manager app uses) with short timeouts and bounded concurrency. Only handshake-verified hits are reported.
+- **Persistence** (`src/config/state.ts`): the verified address is written to `connection.json` in a per-user state directory (`APPDATA` / `XDG_CONFIG_HOME` / `Application Support`, overridable via `MONEY_MANAGER_STATE_DIR`), so later sessions start connected where the last one ended.
 
 ### 4.2 JavaScript Literal Parsing
 
@@ -222,17 +231,18 @@ Configuration is defined by a single Zod schema (`src/config/index.ts`), which i
 
 ### Environment Variables
 
-| Variable                        | Required | Default | Description          |
-| ------------------------------- | -------- | ------- | -------------------- |
-| `MONEY_MANAGER_BASE_URL`        | No\*     | -       | Server URL           |
-| `MONEY_MANAGER_TIMEOUT`         | No       | 30000   | Request timeout (ms) |
-| `MONEY_MANAGER_RETRY_COUNT`     | No       | 3       | Retry attempts       |
-| `MONEY_MANAGER_LOG_LEVEL`       | No       | info    | Log level            |
-| `MONEY_MANAGER_SESSION_PERSIST` | No       | true    | Persist cookies      |
+| Variable                        | Required | Default                  | Description                                    |
+| ------------------------------- | -------- | ------------------------ | ---------------------------------------------- |
+| `MONEY_MANAGER_BASE_URL`        | No       | -                        | Server URL                                     |
+| `MONEY_MANAGER_TIMEOUT`         | No       | 30000                    | Request timeout (ms)                           |
+| `MONEY_MANAGER_RETRY_COUNT`     | No       | 3                        | Retry attempts                                 |
+| `MONEY_MANAGER_LOG_LEVEL`       | No       | info                     | Log level                                      |
+| `MONEY_MANAGER_DISCOVERY_PORTS` | No       | 8888,6200,7200,8200,9200 | Ports scanned by `connection_discover`         |
+| `MONEY_MANAGER_STATE_DIR`       | No       | per-user config dir      | Directory for the persisted connection address |
 
-\* Either `--baseUrl` or `MONEY_MANAGER_BASE_URL` must be provided.
+The server address is optional at startup — with none configured, the first tool call fails with a message telling the model to discover or ask for the address and set it via `connection_set`, which verifies it and persists it for later sessions.
 
-A few settings have no environment variable and can only be set through the config file: `server.retryDelay` (base delay for the exponential-backoff retry, default 1000 ms), `logging.format` (`json` or `text`, default `json`), and `session.cookieFile` (default `.session-cookies.json`). The full key reference is in [SETUP.md](../SETUP.md).
+A few settings have no environment variable and can only be set through the config file: `server.retryDelay` (base delay for the exponential-backoff retry, default 1000 ms) and `logging.format` (`json` or `text`, default `json`). The full key reference is in [SETUP.md](../SETUP.md).
 
 ### Configuration Priority
 
@@ -241,7 +251,8 @@ Highest priority first:
 1. **CLI argument** — `--baseUrl http://192.168.1.1:8888`
 2. **Environment variables** — `MONEY_MANAGER_*`
 3. **Config file** — `.money-manager-mcp.json` in the working directory
-4. **Schema defaults**
+4. **Persisted address** — the last one verified by `connection_set`, stored in the per-user state directory
+5. **Schema defaults**
 
 ### Configuration Loading
 
@@ -255,16 +266,14 @@ Highest priority first:
 
 ### Implemented Security Measures
 
-1. **No Credential Storage**: API uses session cookies only
-2. **Cookie Persistence**: Session cookies stored locally with owner-only file permissions (excluded from git)
-3. **Input Validation**: All tool inputs validated with Zod schemas
-4. **Export Confinement**: `summary_export_excel`'s `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the server's working directory — other extensions, absolute paths, `..` traversal, and symlinks (including dangling ones) pointing outside it are rejected during input validation and re-checked immediately before the file is written. The write goes through an exclusive temp file and an atomic rename, so a symlink planted between validation and write is replaced rather than followed
-5. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
+1. **No Credential Storage**: API uses session cookies only, kept in memory (never written to disk)
+2. **Input Validation**: All tool inputs validated with Zod schemas
+3. **Export Confinement**: `summary_export_excel`'s `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the server's working directory — other extensions, absolute paths, `..` traversal, and symlinks (including dangling ones) pointing outside it are rejected during input validation and re-checked immediately before the file is written. The write goes through an exclusive temp file and an atomic rename, so a symlink planted between validation and write is replaced rather than followed
+4. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
 
 ### Files Excluded from Repository
 
 - `.env` - Environment configuration
-- `.session-cookies.json` - Session data
 - `*.xls`, `*.xlsx` - Exported financial data
 
 ---
@@ -351,7 +360,7 @@ There is no automated test suite. The server is verified by:
 2. `npm run lint` — ESLint
 3. Manual testing with an MCP-compatible client (Claude Desktop, VS Code)
 
-For a full live end-to-end protocol — all 18 tools exercised with throwaway data and guaranteed cleanup — follow the `testing-money-manager-mcp` skill in `.agents/skills/testing-money-manager-mcp/SKILL.md`.
+For a full live end-to-end protocol — all 20 tools exercised with throwaway data and guaranteed cleanup — follow the `testing-money-manager-mcp` skill in `.agents/skills/testing-money-manager-mcp/SKILL.md`.
 
 Handlers are pure `(client, args) → object` functions, so they can be unit-tested against a mocked `HttpClient` without a live server, but no such tests are included.
 

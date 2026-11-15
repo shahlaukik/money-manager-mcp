@@ -47,7 +47,7 @@ This guide covers installation and configuration of the Money Manager MCP server
 
 ### Command Line Arguments (Recommended)
 
-The simplest way to configure the server is via the `--baseUrl` argument:
+The `--baseUrl` argument is optional: without any configured address the server still starts, and the AI establishes the connection on first use (via `connection_set` — the verified address is then remembered across sessions, so this is a one-time step). Providing it up front simply skips that step:
 
 ```bash
 npx money-manager-mcp@latest --baseUrl http://192.168.1.1:8888
@@ -58,7 +58,8 @@ npx money-manager-mcp@latest --baseUrl http://192.168.1.1:8888
 Alternatively, you can use environment variables. Create a `.env` file or set them in your MCP client config:
 
 ```bash
-# Required: Base URL of your Money Manager server
+# Optional: Base URL of your Money Manager server (omit for a zero-config
+# start — the AI connects on first use and the address is remembered)
 MONEY_MANAGER_BASE_URL=http://your-server-ip:port
 
 # Optional: Request timeout in milliseconds (default: 30000)
@@ -71,8 +72,14 @@ MONEY_MANAGER_RETRY_COUNT=3
 # Optional: Log level (debug|info|warn|error) (default: info)
 MONEY_MANAGER_LOG_LEVEL=info
 
-# Optional: Whether to persist session cookies across restarts (default: true)
-MONEY_MANAGER_SESSION_PERSIST=true
+# Optional: Ports scanned by connection_discover, comma-separated
+# (default: 8888,6200,7200,8200,9200 — the ports the PC Manager app uses)
+MONEY_MANAGER_DISCOVERY_PORTS=8888,6200,7200,8200,9200
+
+# Optional: Directory for persisted state (the last verified PC Manager
+# address). Defaults to your per-user config directory; override to isolate
+# test runs.
+MONEY_MANAGER_STATE_DIR=
 ```
 
 ### Configuration Priority
@@ -82,7 +89,10 @@ The server reads configuration in this order (highest priority first):
 1. **Command line arguments** (`--baseUrl`)
 2. **Environment variables** (`MONEY_MANAGER_BASE_URL`)
 3. **Configuration file** (`.money-manager-mcp.json`)
-4. **Schema defaults**
+4. **Persisted address** (the last one verified by `connection_set`, stored in your per-user config directory)
+5. **Schema defaults**
+
+Without a configured address the server starts unconfigured; the first tool call then fails with a clear message telling the AI to ask you for the address shown in PC Manager (or discover it on the network) and pass it to `connection_set`.
 
 ### Configuration File (Alternative)
 
@@ -100,27 +110,23 @@ You can also use a `.money-manager-mcp.json` file in your working directory. Any
     "level": "info",
     "format": "json"
   },
-  "session": {
-    "persist": true,
-    "cookieFile": ".session-cookies.json"
+  "discovery": {
+    "ports": [8888, 6200, 7200, 8200, 9200]
   }
 }
 ```
 
-| Key                  | Default                 | Description                                                              |
-| -------------------- | ----------------------- | ------------------------------------------------------------------------ |
-| `server.baseUrl`     | — (required)            | Money Manager server address (`http://` or `https://`)                   |
-| `server.timeout`     | `30000`                 | Request timeout in milliseconds (1000–120000)                            |
-| `server.retryCount`  | `3`                     | Retry attempts for failed read requests (0–10); writes are never retried |
-| `server.retryDelay`  | `1000`                  | Base delay in milliseconds for the exponential-backoff retry             |
-| `logging.level`      | `info`                  | `debug` \| `info` \| `warn` \| `error`                                   |
-| `logging.format`     | `json`                  | Log line format written to stderr: `json` or `text`                      |
-| `session.persist`    | `true`                  | Persist session cookies across restarts                                  |
-| `session.cookieFile` | `.session-cookies.json` | Cookie file path, relative to the working directory                      |
+| Key                 | Default                          | Description                                                              |
+| ------------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| `server.baseUrl`    | — (optional)                     | Money Manager server address (`http://` or `https://`)                   |
+| `server.timeout`    | `30000`                          | Request timeout in milliseconds (1000–120000)                            |
+| `server.retryCount` | `3`                              | Retry attempts for failed read requests (0–10); writes are never retried |
+| `server.retryDelay` | `1000`                           | Base delay in milliseconds for the exponential-backoff retry             |
+| `logging.level`     | `info`                           | `debug` \| `info` \| `warn` \| `error`                                   |
+| `logging.format`    | `json`                           | Log line format written to stderr: `json` or `text`                      |
+| `discovery.ports`   | `[8888, 6200, 7200, 8200, 9200]` | Ports scanned by `connection_discover`                                   |
 
-> `retryDelay`, `logging.format`, and `session.cookieFile` can only be set through the config file (there are no environment variables for them).
-
-When session persistence is enabled, the server saves its session cookies to the configured cookie file in the working directory so it can reuse the login across restarts. The file is gitignored and created only after the first successful request.
+> `retryDelay` and `logging.format` can only be set through the config file (there are no environment variables for them).
 
 ## MCP Client Setup
 
@@ -340,6 +346,8 @@ The Money Manager app runs on your local network. Common ways to find it:
 3. Click on **Start** to start the server.
 4. Note the IP address and port displayed (e.g., `192.168.1.1:8888`).
 
+The port (and sometimes the IP) can change each time you start PC Manager. You don't need to edit your config and restart when it does: tell the AI the new address (for example "PC Manager is on port 4123 now") and it will call `connection_set`. You can also just ask it to "find my Money Manager on the network" — `connection_discover` scans the local subnet on the ports the app uses and verifies each hit, so only real Money Manager servers are reported. The address is verified before switching and remembered for future sessions (in your per-user config directory; override with `MONEY_MANAGER_STATE_DIR`). The address in your config is only where the server starts.
+
 ## Troubleshooting
 
 ### Common Issues
@@ -347,14 +355,14 @@ The Money Manager app runs on your local network. Common ways to find it:
 #### "Cannot connect to Money Manager server"
 
 - Verify the server URL is correct
-- Check if the Money Manager app is running
-- Ensure network connectivity between your machine and the server
+- Check if the Money Manager app is running (PC Manager started on the phone)
+- Ensure both devices are on the same Wi-Fi network
+- Ask the AI to "find my Money Manager on the network" — `connection_discover` re-locates it after the phone's IP or port changed
 
 #### "Session expired" errors
 
-- The server auto-manages sessions
+- The server auto-manages sessions; sessions are re-established automatically on the next call
 - Try restarting the MCP server
-- Check `MONEY_MANAGER_SESSION_PERSIST` is set to `true`
 
 #### "outputPath must end in .xls or .xlsx (other extensions are not allowed)"
 

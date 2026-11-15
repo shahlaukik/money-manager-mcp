@@ -6,7 +6,7 @@ Guidance for AI coding agents (Claude, Copilot, ZCode, etc.) working in this rep
 
 Money Manager MCP is a **Model Context Protocol** server that lets AI assistants manage personal finances through the **Realbyte Money Manager** Android app's "PC Manager" web server (a local-network HTTP service).
 
-The server runs over **stdio** and exposes **18 tools** (no resources, no prompts). It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in TypeScript (strict mode, ESM, Node ≥ 22).
+The server runs over **stdio** and exposes **20 tools** (no resources, no prompts). It is built on [FastMCP](https://github.com/punkpeye/fastmcp) and written in TypeScript (strict mode, ESM, Node ≥ 22).
 
 A phone running the Money Manager app and the computer running the server must be on the **same Wi-Fi network**. There is no automated test suite.
 
@@ -17,9 +17,11 @@ src/
 ├── index.ts          # Server bootstrap — thin; wires FastMCP + HTTP client + stdio
 ├── client/
 │   ├── http-client.ts  # axios + cookie sessions, retry, XML & JS-literal parsing
+│   ├── discovery.ts    # verified server probe + LAN scan (connection_discover)
 │   └── identifiers.ts  # character classifiers used by the JS-literal parser
 ├── config/
-│   └── index.ts      # Layered config: CLI > env > .money-manager-mcp.json > defaults
+│   ├── index.ts      # Layered config: CLI > env > .money-manager-mcp.json > defaults
+│   └── state.ts      # Per-user state dir; persists the last verified address
 ├── errors/
 │   └── index.ts      # McpError taxonomy (Network/API/Session/File/Internal)
 ├── schemas/
@@ -46,7 +48,7 @@ npm run lint     # ESLint
 npm run format   # Prettier
 ```
 
-The server requires a base URL (the only required setting). In development pass it as a flag:
+The base URL is optional — without it the server starts unconfigured and the AI establishes the connection on first use (`connection_set` verifies and remembers the address). In development pass it as a flag:
 
 ```bash
 npm run dev -- --baseUrl http://192.168.1.1:8888
@@ -97,7 +99,7 @@ Layered (highest priority first), all funneled through one Zod schema in `src/co
 3. `.money-manager-mcp.json` in the working directory
 4. Schema defaults
 
-Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`, `MONEY_MANAGER_RETRY_COUNT`, `MONEY_MANAGER_LOG_LEVEL`, `MONEY_MANAGER_SESSION_PERSIST`.
+Supported env vars: `MONEY_MANAGER_BASE_URL`, `MONEY_MANAGER_TIMEOUT`, `MONEY_MANAGER_RETRY_COUNT`, `MONEY_MANAGER_LOG_LEVEL`, `MONEY_MANAGER_DISCOVERY_PORTS` (ports scanned by `connection_discover`), `MONEY_MANAGER_STATE_DIR` (overrides the per-user state dir for the persisted address). When no address is configured anywhere, startup falls back to the last address verified by `connection_set` (state file `connection.json`). Session cookies are kept in an in-memory jar only — there is no cookie disk persistence (the live upstream server sets no cookies).
 
 ## Coding Conventions
 
@@ -157,8 +159,8 @@ The Money Manager HTTP API is unusual. Respect these when writing handlers:
 - No new runtime dependencies without a clear need; the dependency list is intentionally small.
 - No `any`, no `@ts-ignore`, no loosening strict flags.
 - Don't expose the backup/restore endpoints as tools.
-- Don't commit `.env`, `.session-cookies.json`, `*.xls`/`*.xlsx`, or the local
-  `.github/prompts/` directory (all gitignored).
+- Don't commit `.env`, `*.xls`/`*.xlsx`, or the local `.github/prompts/`
+  directory (all gitignored).
 
 ## Project Philosophy
 

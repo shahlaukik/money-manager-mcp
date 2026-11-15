@@ -19,24 +19,40 @@ try {
  * override anything else).
  */
 export const ConfigSchema = z.object({
-  server: z.object({
-    // http(s) only: axios cannot speak other schemes, and rejecting them here
-    // gives a clear validation error instead of a confusing request failure.
-    baseUrl: z
-      .string()
-      .url()
-      .regex(/^https?:\/\//, "baseUrl must start with http:// or https://"),
-    timeout: z.number().min(1000).max(120000).default(30000),
-    retryCount: z.number().min(0).max(10).default(3),
-    retryDelay: z.number().min(100).max(10000).default(1000),
-  }),
-  session: z
+  server: z
     .object({
-      persist: z.boolean().default(true),
-      cookieFile: z.string().default(".session-cookies.json"),
+      // http(s) only: axios cannot speak other schemes, and rejecting them
+      // here gives a clear validation error instead of a confusing request
+      // failure. Optional: without it the server starts unconfigured and
+      // connection_set (or a persisted address from a previous session)
+      // establishes it.
+      baseUrl: z
+        .string()
+        .url()
+        .regex(/^https?:\/\//, "baseUrl must start with http:// or https://")
+        .optional(),
+      timeout: z.number().min(1000).max(120000).default(30000),
+      retryCount: z.number().min(0).max(10).default(3),
+      retryDelay: z.number().min(100).max(10000).default(1000),
     })
-    // prefault: the `{}` input is parsed so the field-level defaults apply
-    // (zod v4's `.default()` would require the fully-resolved output shape).
+    // prefault: a fully empty config (no file/env/CLI) parses with the
+    // field-level defaults applying — the zero-config start.
+    .prefault({}),
+  discovery: z
+    .object({
+      // Ports the PC Manager app is known to use; scanned by
+      // connection_discover. Kept in config so a future app change is a
+      // config edit, not a code change.
+      ports: z
+        .number()
+        .int()
+        .min(1)
+        .max(65535)
+        .array()
+        .min(1)
+        .max(64)
+        .default([8888, 6200, 7200, 8200, 9200]),
+    })
     .prefault({}),
   logging: z
     .object({
@@ -116,9 +132,13 @@ function loadEnvConfig(): Record<string, unknown> {
     deepSet(config, "logging.level", logLevel);
   }
 
-  const sessionPersist = process.env["MONEY_MANAGER_SESSION_PERSIST"];
-  if (sessionPersist) {
-    deepSet(config, "session.persist", sessionPersist === "true");
+  const discoveryPorts = process.env["MONEY_MANAGER_DISCOVERY_PORTS"];
+  if (discoveryPorts) {
+    const ports = discoveryPorts
+      .split(",")
+      .map((port) => parseInt(port.trim(), 10))
+      .filter((port) => !Number.isNaN(port));
+    deepSet(config, "discovery.ports", ports);
   }
 
   return config;

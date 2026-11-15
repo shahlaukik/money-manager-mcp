@@ -51,13 +51,9 @@ function toFormValue(value: unknown): string {
  *  - XML for transaction lists
  */
 export class HttpClient {
-  /** Axios instance; created in initialize() once the session jar is final. */
+  /** Axios instance; created in initialize(). */
   private client!: AxiosInstance;
   private cookieJar: CookieJar;
-  /** Last persisted cookie state — lets saves skip no-op disk writes. */
-  private lastSavedCookies: string | undefined;
-  /** Serializes cookie writes so queued async saves cannot interleave. */
-  private cookieSaveChain: Promise<void> = Promise.resolve();
   private readonly config: Config;
 
   constructor(config: Config) {
@@ -66,18 +62,16 @@ export class HttpClient {
   }
 
   /**
-   * Restores the persisted session (if enabled) and creates the axios
-   * instance bound to the final cookie jar. Must complete before the first
-   * request; `createHttpClient` takes care of awaiting it.
+   * Creates the axios instance bound to the cookie jar; must run before the
+   * first request (`createHttpClient` takes care of it).
    */
-  async initialize(): Promise<void> {
-    if (this.config.session?.persist) {
-      await this.loadCookies();
-    }
-
+  initialize(): void {
+    const baseUrl = this.config.server.baseUrl;
     this.client = wrapper(
       axios.create({
-        baseURL: `${this.config.server.baseUrl}/moneyBook`,
+        // Empty until connection_set establishes an address; requests are
+        // blocked by the not-configured guard long before the URL is used.
+        baseURL: baseUrl ? `${baseUrl}/moneyBook` : "",
         timeout: this.config.server.timeout,
         jar: this.cookieJar,
         maxContentLength: MAX_RESPONSE_BYTES,
@@ -108,13 +102,34 @@ export class HttpClient {
           "debug",
           `Response: ${response.status} ${response.statusText}`,
         );
-        if (this.config.session?.persist) {
-          this.saveCookies();
-        }
         return response;
       },
       async (error: unknown) => this.handleResponseError(error),
     );
+  }
+
+  // ----------------------------------------------------------------- address
+
+  /** The Money Manager server address currently in use, if one is. */
+  getBaseUrl(): string | undefined {
+    return this.config.server.baseUrl;
+  }
+
+  /** Ports scanned by connection_discover (the known PC Manager port set). */
+  getDiscoveryPorts(): number[] {
+    return this.config.discovery.ports;
+  }
+
+  /**
+   * Points the client at a new server address (PC Manager picks a new port on
+   * every start). Cookies are cleared because they are scoped by host, not
+   * port, and the old session belongs to the previous server run.
+   */
+  async setBaseUrl(baseUrl: string): Promise<void> {
+    this.config.server.baseUrl = baseUrl;
+    this.client.defaults.baseURL = `${baseUrl}/moneyBook`;
+    await this.cookieJar.removeAllCookies();
+    this.log("info", `Base URL changed to: ${baseUrl}`);
   }
 
   // ---------------------------------------------------------------- GET / POST
@@ -241,6 +256,16 @@ export class HttpClient {
     requestFn: () => Promise<AxiosResponse<T>>,
     idempotent = false,
   ): Promise<AxiosResponse<T>> {
+    if (!this.config.server.baseUrl) {
+      throw new NetworkError(
+        "No PC Manager address is configured. Call `connection_discover` " +
+          "to scan the local network, or ask the user for the IP and port " +
+          "shown in the PC Manager app on their phone, then call " +
+          "`connection_set`.",
+        false,
+      );
+    }
+
     const maxRetries = idempotent ? this.config.server.retryCount : 0;
     let lastError: McpError | undefined;
 
@@ -275,7 +300,9 @@ export class HttpClient {
       // Network errors (no response received)
       if (!axiosError.response) {
         if (axiosError.code === "ECONNREFUSED") {
-          throw NetworkError.connectionRefused(this.config.server.baseUrl);
+          throw NetworkError.connectionRefused(
+            this.config.server.baseUrl ?? "(no address)",
+          );
         }
         if (
           axiosError.code === "ETIMEDOUT" ||
@@ -294,7 +321,7 @@ export class HttpClient {
         }
         if (axiosError.code === "ENOTFOUND") {
           throw NetworkError.unreachable(
-            this.config.server.baseUrl,
+            this.config.server.baseUrl ?? "(no address)",
             axiosError.message,
           );
         }
@@ -471,83 +498,6 @@ export class HttpClient {
     return Object.keys(filtered).length > 0 ? filtered : undefined;
   }
 
-  // ----------------------------------------------------------- cookie persistence
-
-  /** Path of the persisted cookie file. */
-  private getCookiePath(): string {
-    return path.resolve(
-      process.cwd(),
-      this.config.session?.cookieFile ?? ".session-cookies.json",
-    );
-  }
-
-  /**
-   * Loads cookies from the persisted file, if present. Runs before the axios
-   * instance is created, so the deserialized jar can simply replace the empty
-   * one axios would otherwise bind.
-   */
-  private async loadCookies(): Promise<void> {
-    const cookiePath = this.getCookiePath();
-    try {
-      const cookies: unknown = JSON.parse(
-        await fs.readFile(cookiePath, "utf-8"),
-      );
-      if (cookies && typeof cookies === "object") {
-        this.cookieJar = CookieJar.deserializeSync(
-          cookies as CookieJar.Serialized,
-        );
-        this.lastSavedCookies = JSON.stringify(
-          this.cookieJar.serializeSync(),
-          null,
-          2,
-        );
-      }
-    } catch (error) {
-      // A missing file is the normal first-run case.
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        this.log("warn", `Failed to load cookies from ${cookiePath}:`, error);
-      }
-    }
-  }
-
-  /**
-   * Persists cookies to disk, queued so async writes cannot interleave.
-   * Unchanged state is skipped. A write still pending at process exit is
-   * simply lost — the client re-authenticates on the next start.
-   */
-  private saveCookies(): void {
-    this.cookieSaveChain = this.cookieSaveChain
-      .then(() => this.writeCookiesIfChanged())
-      .catch((error: unknown) => {
-        this.log(
-          "warn",
-          `Failed to save cookies to ${this.getCookiePath()}:`,
-          error,
-        );
-      });
-  }
-
-  private async writeCookiesIfChanged(): Promise<void> {
-    const cookiePath = this.getCookiePath();
-    const serialized = JSON.stringify(this.cookieJar.serializeSync(), null, 2);
-    if (serialized === this.lastSavedCookies) return;
-    try {
-      // 0600: live session cookies must not be group/world readable. `mode`
-      // only applies at file creation, so chmod also tightens files written
-      // before this hardening.
-      await fs.writeFile(cookiePath, serialized, { mode: 0o600 });
-      try {
-        await fs.chmod(cookiePath, 0o600);
-      } catch {
-        // Filesystems without chmod support (e.g. some Windows shares) are fine.
-      }
-      this.lastSavedCookies = serialized;
-    } catch (error) {
-      this.lastSavedCookies = undefined; // retry on the next response
-      throw error; // logged by the saveCookies chain
-    }
-  }
-
   // -------------------------------------------------------------------- logging
 
   /**
@@ -583,9 +533,9 @@ export class HttpClient {
   }
 }
 
-/** Creates a new HTTP client, restoring any persisted session. */
-export async function createHttpClient(config: Config): Promise<HttpClient> {
+/** Creates a new HTTP client with its axios instance and cookie jar. */
+export function createHttpClient(config: Config): HttpClient {
   const client = new HttpClient(config);
-  await client.initialize();
+  client.initialize();
   return client;
 }

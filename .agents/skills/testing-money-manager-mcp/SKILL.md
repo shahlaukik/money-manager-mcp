@@ -1,6 +1,6 @@
 ---
 name: testing-money-manager-mcp
-description: Full end-to-end verification of the Money Manager MCP server against the live upstream API — exercises all 18 tools with throwaway data, then verifies cleanup restored the original state. Use after changing server code (tools, schemas, HTTP client, config) and before merging. Read-only for the user's real data; all mutations happen on test assets that are deleted afterward.
+description: Full end-to-end verification of the Money Manager MCP server against the live upstream API — exercises all 20 tools with throwaway data, then verifies cleanup restored the original state. Use after changing server code (tools, schemas, HTTP client, config) and before merging. Read-only for the user's real data; all mutations happen on test assets that are deleted afterward.
 ---
 
 # Testing Money Manager MCP end-to-end
@@ -13,7 +13,7 @@ tools before starting (`mcp__<server-name>__<tool-name>`).
 
 There is no test runner and no CI. This live protocol IS the verification.
 
-## Tool coverage checklist (all 18 — the final report must account for each)
+## Tool coverage checklist (all 20 — the final report must account for each)
 
 | #   | Tool                        | Where exercised                                    |
 | --- | --------------------------- | -------------------------------------------------- |
@@ -35,6 +35,8 @@ There is no test runner and no CI. This live protocol IS the verification.
 | 16  | `transfer_update`           | Phase 5                                            |
 | 17  | `dashboard_get_overview`    | Phase 1                                            |
 | 18  | `dashboard_get_asset_chart` | Phase 1                                            |
+| 19  | `connection_set`            | Error message check (cases 4–6), first-run flow    |
+| 20  | `connection_discover`       | Error message check (case 7), first-run flow       |
 
 `card_create`/`card_update` are consent-gated (Phase 6 — ask the user,
 recommended default: proceed). A user-declined skip with reason satisfies
@@ -110,6 +112,38 @@ reaches the upstream server and no data is touched:
    `mbid`, `outputPath: "export.txt"`) must fail with "outputPath must end
    in .xls or .xlsx (other extensions are not allowed)" — another
    server-side Zod refine in the same family as the traversal rule.
+4. `connection_set` with no arguments must fail with "Provide port, host,
+   or both".
+5. `connection_set` with only `port` set to the port the server is already
+   on must return `{success: true, baseUrl}` with that same URL, and a
+   following `init_get_data` must still succeed (the cleared session is
+   re-established transparently).
+6. `connection_set` with `port: 1` (nothing runs there) must fail with
+   "Could not reach a Money Manager server at http://<host>:1" and include
+   "Keeping the current address" — the probe-before-commit guard. A
+   following `init_get_data` must still succeed against the retained
+   address.
+7. `connection_discover` must return the live server as a verified
+   candidate (`{success: true, candidates: [...]}` containing the phone's
+   real host and port, i.e. the same address the other tools use).
+
+### First-run flow (requires spawning a second server process)
+
+With an isolated state dir and no configured address, the whole connection
+lifecycle must work with zero configuration. Spawn the built server
+directly (`node dist/index.js`, no `--baseUrl`) with
+`MONEY_MANAGER_STATE_DIR` pointing at a fresh empty directory, speak MCP
+over stdio (initialize → tools/call), and verify in order:
+
+1. `init_get_data` fails with "No PC Manager address is configured".
+2. `connection_discover` finds exactly one candidate (the live phone).
+3. `connection_set {host, port}` from the candidate succeeds and the
+   state dir now contains `connection.json` with that base URL.
+4. Kill the process, spawn a fresh one (same state dir, still no
+   `--baseUrl`): `init_get_data` succeeds immediately — the persisted
+   address was picked up.
+
+Delete the temp state dir afterward.
 
 ## Phase 2 — Export
 

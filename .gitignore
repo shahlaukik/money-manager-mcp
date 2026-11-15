@@ -38,9 +38,7 @@ tmp/
 temp/
 *.tmp
 
-# Session/cookie storage (if persisted)
-.session/
-cookies.json
+# Legacy session-cookie store from older versions (no longer written)
 .session-cookies.json
 
 # Exported files with financial data
