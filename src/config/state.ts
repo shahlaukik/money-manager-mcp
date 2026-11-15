@@ -72,11 +72,9 @@ export async function savePersistedConnection(baseUrl: string): Promise<void> {
   const dir = getStateDir();
   await fs.mkdir(dir, { recursive: true });
   const file = path.join(dir, CONNECTION_FILE);
-  await fs.writeFile(
-    file,
-    JSON.stringify({ baseUrl }, null, 2),
-    { mode: 0o600 },
-  );
+  await fs.writeFile(file, JSON.stringify({ baseUrl }, null, 2), {
+    mode: 0o600,
+  });
   try {
     await fs.chmod(file, 0o600);
   } catch {

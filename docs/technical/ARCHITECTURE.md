@@ -231,14 +231,14 @@ Configuration is defined by a single Zod schema (`src/config/index.ts`), which i
 
 ### Environment Variables
 
-| Variable                        | Required | Default | Description                    |
-| ------------------------------- | -------- | ------- | ------------------------------ |
-| `MONEY_MANAGER_BASE_URL`        | No       | -       | Server URL                     |
-| `MONEY_MANAGER_TIMEOUT`         | No       | 30000   | Request timeout (ms)           |
-| `MONEY_MANAGER_RETRY_COUNT`     | No       | 3       | Retry attempts                 |
-| `MONEY_MANAGER_LOG_LEVEL`       | No       | info    | Log level                      |
-| `MONEY_MANAGER_DISCOVERY_PORTS` | No       | 8888,6200,7200,8200,9200 | Ports scanned by `connection_discover` |
-| `MONEY_MANAGER_STATE_DIR`       | No       | per-user config dir | Directory for the persisted connection address |
+| Variable                        | Required | Default                  | Description                                    |
+| ------------------------------- | -------- | ------------------------ | ---------------------------------------------- |
+| `MONEY_MANAGER_BASE_URL`        | No       | -                        | Server URL                                     |
+| `MONEY_MANAGER_TIMEOUT`         | No       | 30000                    | Request timeout (ms)                           |
+| `MONEY_MANAGER_RETRY_COUNT`     | No       | 3                        | Retry attempts                                 |
+| `MONEY_MANAGER_LOG_LEVEL`       | No       | info                     | Log level                                      |
+| `MONEY_MANAGER_DISCOVERY_PORTS` | No       | 8888,6200,7200,8200,9200 | Ports scanned by `connection_discover`         |
+| `MONEY_MANAGER_STATE_DIR`       | No       | per-user config dir      | Directory for the persisted connection address |
 
 The server address is optional at startup — with none configured, the first tool call fails with a message telling the model to discover or ask for the address and set it via `connection_set`, which verifies it and persists it for later sessions.
 
@@ -268,8 +268,8 @@ Highest priority first:
 
 1. **No Credential Storage**: API uses session cookies only, kept in memory (never written to disk)
 2. **Input Validation**: All tool inputs validated with Zod schemas
-4. **Export Confinement**: `summary_export_excel`'s `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the server's working directory — other extensions, absolute paths, `..` traversal, and symlinks (including dangling ones) pointing outside it are rejected during input validation and re-checked immediately before the file is written. The write goes through an exclusive temp file and an atomic rename, so a symlink planted between validation and write is replaced rather than followed
-5. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
+3. **Export Confinement**: `summary_export_excel`'s `outputPath` must be a relative `.xls`/`.xlsx` path that resolves inside the server's working directory — other extensions, absolute paths, `..` traversal, and symlinks (including dangling ones) pointing outside it are rejected during input validation and re-checked immediately before the file is written. The write goes through an exclusive temp file and an atomic rename, so a symlink planted between validation and write is replaced rather than followed
+4. **No Code Evaluation**: Response parsing never falls back to `eval`/`new Function`; malformed upstream responses throw instead of executing
 
 ### Files Excluded from Repository
 

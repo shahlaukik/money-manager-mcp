@@ -9,7 +9,10 @@
 
 import type { z } from "zod";
 
-import { checkMoneyManagerAt, discoverMoneyManagers } from "../client/discovery.js";
+import {
+  checkMoneyManagerAt,
+  discoverMoneyManagers,
+} from "../client/discovery.js";
 import type { HttpClient } from "../client/http-client.js";
 import { savePersistedConnection } from "../config/state.js";
 import { FileError, NetworkError, wrapError } from "../errors/index.js";

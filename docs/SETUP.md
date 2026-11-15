@@ -116,15 +116,15 @@ You can also use a `.money-manager-mcp.json` file in your working directory. Any
 }
 ```
 
-| Key                  | Default                 | Description                                                              |
-| -------------------- | ----------------------- | ------------------------------------------------------------------------ |
-| `server.baseUrl`     | — (optional)            | Money Manager server address (`http://` or `https://`)                   |
-| `server.timeout`     | `30000`                 | Request timeout in milliseconds (1000–120000)                            |
-| `server.retryCount`  | `3`                     | Retry attempts for failed read requests (0–10); writes are never retried |
-| `server.retryDelay`  | `1000`                  | Base delay in milliseconds for the exponential-backoff retry             |
-| `logging.level`      | `info`                  | `debug` \| `info` \| `warn` \| `error`                                   |
-| `logging.format`     | `json`                  | Log line format written to stderr: `json` or `text`                      |
-| `discovery.ports`    | `[8888, 6200, 7200, 8200, 9200]` | Ports scanned by `connection_discover`                        |
+| Key                 | Default                          | Description                                                              |
+| ------------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| `server.baseUrl`    | — (optional)                     | Money Manager server address (`http://` or `https://`)                   |
+| `server.timeout`    | `30000`                          | Request timeout in milliseconds (1000–120000)                            |
+| `server.retryCount` | `3`                              | Retry attempts for failed read requests (0–10); writes are never retried |
+| `server.retryDelay` | `1000`                           | Base delay in milliseconds for the exponential-backoff retry             |
+| `logging.level`     | `info`                           | `debug` \| `info` \| `warn` \| `error`                                   |
+| `logging.format`    | `json`                           | Log line format written to stderr: `json` or `text`                      |
+| `discovery.ports`   | `[8888, 6200, 7200, 8200, 9200]` | Ports scanned by `connection_discover`                                   |
 
 > `retryDelay` and `logging.format` can only be set through the config file (there are no environment variables for them).
 
