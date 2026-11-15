@@ -69,6 +69,11 @@ The server blocks on stdio waiting for an MCP client. There is no HTTP port and 
 
 There is no CI config in the repo; the build + lint commands above are the checks.
 
+To cut a release after merging feature branches — version check/bump, npm
+publish, tag + GitHub release — follow the `release-money-manager-mcp` skill
+in `.agents/skills/release-money-manager-mcp/SKILL.md`. It is approval-gated
+and runs from `main` only.
+
 ## Architecture in Brief
 
 **Define each tool once.** In `src/tools/handlers.ts`, every entry in the `TOOLS` array binds together a `name`, `description`, Zod `schema`, and `handler`. FastMCP then:
