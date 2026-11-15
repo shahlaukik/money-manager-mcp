@@ -23,7 +23,7 @@ The MCP server provides **19 tools** organized into 8 categories:
 
 ### `connection_set`
 
-Points the server at a new PC Manager address without restarting it. PC Manager picks a new port every time you start it on your phone, so tell the AI the address it shows. Whatever you leave out (host or port) stays the same. The session cookie is cleared, so the next call starts a fresh session.
+Points the server at a new PC Manager address without restarting it. PC Manager picks a new port every time you start it on your phone, so tell the AI the address it shows. Whatever you leave out (host or port) stays the same. The new address is verified before switching — if nothing answers there, the call fails and the previous address stays active. A successful switch is remembered across sessions, and the session cookie is cleared, so the next call starts a fresh session.
 
 **Parameters** (at least one is required):
 
