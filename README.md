@@ -43,7 +43,7 @@ Add the server to your AI client.
 [![Install for VS Code](https://img.shields.io/badge/VS_Code-Install_Money_Manager_MCP-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=money-manager&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22money-manager-mcp%40latest%22%2C%22--baseUrl%22%2C%22%24%7Binput%3AmoneyManager.baseUrl%7D%22%5D%7D&inputs=%5B%7B%22id%22%3A%22moneyManager.baseUrl%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20the%20base%20URL%20for%20the%20Money%20Manager%20API%20%28e.g.%2C%20http%3A%2F%2F192.168.1.1%3A8888%29%22%2C%22default%22%3A%22http%3A%2F%2F192.168.1.1%3A8888%22%7D%5D)
 [![Install for VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_Money_Manager_MCP-24bfa5?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=money-manager&quality=insiders&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22money-manager-mcp%40latest%22%2C%22--baseUrl%22%2C%22%24%7Binput%3AmoneyManager.baseUrl%7D%22%5D%7D&inputs=%5B%7B%22id%22%3A%22moneyManager.baseUrl%22%2C%22type%22%3A%22promptString%22%2C%22description%22%3A%22Enter%20the%20base%20URL%20for%20the%20Money%20Manager%20API%20%28e.g.%2C%20http%3A%2F%2F192.168.1.1%3A8888%29%22%2C%22default%22%3A%22http%3A%2F%2F192.168.1.1%3A8888%22%7D%5D)
 
-**Or manually** — add to `.vscode/mcp.json`:
+**Or manually** — add to `.vscode/mcp.json` (zero-config: the AI finds or asks for the phone's address on first use and remembers it):
 
 ```json
 {
@@ -51,15 +51,13 @@ Add the server to your AI client.
     "money-manager": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "money-manager-mcp@latest",
-        "--baseUrl",
-        "http://YOUR_PHONE_IP:PORT"
-      ]
+      "args": ["money-manager-mcp@latest"]
     }
   }
 }
 ```
+
+To skip first-run setup, pin the address shown in the PC Manager app (`--baseUrl http://YOUR_PHONE_IP:PORT`).
 
 ### Claude Desktop / Cursor / Others
 
@@ -70,11 +68,7 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
   "mcpServers": {
     "money-manager": {
       "command": "npx",
-      "args": [
-        "money-manager-mcp@latest",
-        "--baseUrl",
-        "http://YOUR_PHONE_IP:PORT"
-      ]
+      "args": ["money-manager-mcp@latest"]
     }
   }
 }
@@ -86,7 +80,7 @@ Add the server to your client's MCP config (e.g. `claude_desktop_config.json`):
 
 | Category     | Tools                                                                                |
 | ------------ | ------------------------------------------------------------------------------------ |
-| Connection   | `connection_set`                                                                     |
+| Connection   | `connection_set`, `connection_discover`                                              |
 | Init         | `init_get_data`                                                                      |
 | Transactions | `transaction_list`, `transaction_create`, `transaction_update`, `transaction_delete` |
 | Summaries    | `summary_get_period`, `summary_export_excel`                                         |
@@ -107,6 +101,7 @@ Once connected, just talk to your AI assistant:
 | "Export November's transactions to Excel"    | `summary_export_excel`   |
 | "Show my net worth trend"                    | `dashboard_get_overview` |
 | "PC Manager is on port 4123 now"             | `connection_set`         |
+| "Find my Money Manager on the network"       | `connection_discover`    |
 
 > 📖 More example prompts and multi-step workflows: [Usage Guide](docs/USAGE.md)
 

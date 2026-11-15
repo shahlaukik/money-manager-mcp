@@ -9,7 +9,7 @@
 
 import type { z } from "zod";
 
-import { checkMoneyManagerAt } from "../client/discovery.js";
+import { checkMoneyManagerAt, discoverMoneyManagers } from "../client/discovery.js";
 import type { HttpClient } from "../client/http-client.js";
 import { savePersistedConnection } from "../config/state.js";
 import { FileError, NetworkError, wrapError } from "../errors/index.js";
@@ -28,6 +28,8 @@ import {
   type CardUpdateInput,
   ConnectionSetInputSchema,
   type ConnectionSetInput,
+  ConnectionDiscoverInputSchema,
+  type ConnectionDiscoverInput,
   DashboardGetAssetChartInputSchema,
   type DashboardGetAssetChartInput,
   DashboardGetOverviewInputSchema,
@@ -188,6 +190,26 @@ export async function handleConnectionSet(
   // Remember the verified address so future sessions start connected to it.
   await savePersistedConnection(url.origin);
   return { success: true, baseUrl: client.getBaseUrl() };
+}
+
+/** Scans the local network for verified Money Manager servers (read-only). */
+export async function handleConnectionDiscover(
+  client: HttpClient,
+  args: ConnectionDiscoverInput,
+) {
+  const ports = args.ports ?? client.getDiscoveryPorts();
+  const candidates = await discoverMoneyManagers(ports);
+  if (candidates.length === 0) {
+    return {
+      success: true,
+      candidates,
+      message:
+        "No Money Manager server found on the local network. Ask the user " +
+        "for the IP and port shown in the PC Manager app on their phone, " +
+        "then call `connection_set` with host and port.",
+    };
+  }
+  return { success: true, candidates };
 }
 
 /** Lists transactions within a date range (handles three XML empty-edge cases). */
@@ -632,6 +654,13 @@ export const TOOLS: AnyToolDefinition[] = [
       "Points the server at the Money Manager PC Manager address shown on the phone, without a restart. PC Manager picks a new port every time it starts, so use this when the user gives a new port or IP, or when calls fail with a connection error. When no address is configured yet, provide both host and port; afterwards pass only what changed. The new address is verified first — if unreachable, the current address is kept and the call fails — and a successful switch is remembered across sessions. Returns the active base URL; the next call starts a fresh session.",
     schema: ConnectionSetInputSchema,
     handler: handleConnectionSet,
+  },
+  {
+    name: "connection_discover",
+    description:
+      "Scans the local network for Money Manager PC Manager servers (each local /24 subnet on the ports the app uses) and verifies every hit against /moneyBook/getInitData, so only real Money Manager servers are reported. Read-only. With exactly one candidate, call `connection_set` with its host and port; with several, list them and ask the user which is theirs; with none, ask the user for the address shown in the PC Manager app.",
+    schema: ConnectionDiscoverInputSchema,
+    handler: handleConnectionDiscover,
   },
   {
     name: "init_get_data",

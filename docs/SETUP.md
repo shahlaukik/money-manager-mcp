@@ -74,6 +74,15 @@ MONEY_MANAGER_LOG_LEVEL=info
 
 # Optional: Whether to persist session cookies across restarts (default: true)
 MONEY_MANAGER_SESSION_PERSIST=true
+
+# Optional: Ports scanned by connection_discover, comma-separated
+# (default: 8888,6200,7200,8200,9200 — the ports the PC Manager app uses)
+MONEY_MANAGER_DISCOVERY_PORTS=8888,6200,7200,8200,9200
+
+# Optional: Directory for persisted state (the last verified PC Manager
+# address). Defaults to your per-user config directory; override to isolate
+# test runs.
+MONEY_MANAGER_STATE_DIR=
 ```
 
 ### Configuration Priority
@@ -107,6 +116,9 @@ You can also use a `.money-manager-mcp.json` file in your working directory. Any
   "session": {
     "persist": true,
     "cookieFile": ".session-cookies.json"
+  },
+  "discovery": {
+    "ports": [8888, 6200, 7200, 8200, 9200]
   }
 }
 ```
@@ -121,6 +133,7 @@ You can also use a `.money-manager-mcp.json` file in your working directory. Any
 | `logging.format`     | `json`                  | Log line format written to stderr: `json` or `text`                      |
 | `session.persist`    | `true`                  | Persist session cookies across restarts                                  |
 | `session.cookieFile` | `.session-cookies.json` | Cookie file path, relative to the working directory                      |
+| `discovery.ports`    | `[8888, 6200, 7200, 8200, 9200]` | Ports scanned by `connection_discover`                        |
 
 > `retryDelay`, `logging.format`, and `session.cookieFile` can only be set through the config file (there are no environment variables for them).
 
@@ -344,7 +357,7 @@ The Money Manager app runs on your local network. Common ways to find it:
 3. Click on **Start** to start the server.
 4. Note the IP address and port displayed (e.g., `192.168.1.1:8888`).
 
-The port (and sometimes the IP) can change each time you start PC Manager. You don't need to edit your config and restart when it does: tell the AI the new address (for example "PC Manager is on port 4123 now") and it will call `connection_set`. The address is verified before switching and remembered for future sessions. The address in your config is only where the server starts.
+The port (and sometimes the IP) can change each time you start PC Manager. You don't need to edit your config and restart when it does: tell the AI the new address (for example "PC Manager is on port 4123 now") and it will call `connection_set`. You can also just ask it to "find my Money Manager on the network" — `connection_discover` scans the local subnet on the ports the app uses and verifies each hit, so only real Money Manager servers are reported. The address is verified before switching and remembered for future sessions (in your per-user config directory; override with `MONEY_MANAGER_STATE_DIR`). The address in your config is only where the server starts.
 
 ## Troubleshooting
 

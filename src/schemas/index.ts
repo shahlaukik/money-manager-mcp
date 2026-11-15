@@ -88,6 +88,27 @@ export const ConnectionSetInputSchema = z
 
 export type ConnectionSetInput = z.infer<typeof ConnectionSetInputSchema>;
 
+/**
+ * Input schema for connection_discover tool. All parameters are optional —
+ * by default the ports from the discovery config are scanned.
+ */
+export const ConnectionDiscoverInputSchema = z.object({
+  ports: z
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .array()
+    .min(1)
+    .max(64)
+    .optional()
+    .describe("Ports to scan instead of the configured discovery ports"),
+});
+
+export type ConnectionDiscoverInput = z.infer<
+  typeof ConnectionDiscoverInputSchema
+>;
+
 // ============================================================================
 // Transaction Schemas
 // ============================================================================

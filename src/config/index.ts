@@ -41,6 +41,22 @@ export const ConfigSchema = z.object({
     // prefault: the `{}` input is parsed so the field-level defaults apply
     // (zod v4's `.default()` would require the fully-resolved output shape).
     .prefault({}),
+  discovery: z
+    .object({
+      // Ports the PC Manager app is known to use; scanned by
+      // connection_discover. Kept in config so a future app change is a
+      // config edit, not a code change.
+      ports: z
+        .number()
+        .int()
+        .min(1)
+        .max(65535)
+        .array()
+        .min(1)
+        .max(64)
+        .default([8888, 6200, 7200, 8200, 9200]),
+    })
+    .prefault({}),
   logging: z
     .object({
       level: z.enum(["debug", "info", "warn", "error"]).default("info"),
@@ -122,6 +138,15 @@ function loadEnvConfig(): Record<string, unknown> {
   const sessionPersist = process.env["MONEY_MANAGER_SESSION_PERSIST"];
   if (sessionPersist) {
     deepSet(config, "session.persist", sessionPersist === "true");
+  }
+
+  const discoveryPorts = process.env["MONEY_MANAGER_DISCOVERY_PORTS"];
+  if (discoveryPorts) {
+    const ports = discoveryPorts
+      .split(",")
+      .map((port) => parseInt(port.trim(), 10))
+      .filter((port) => !Number.isNaN(port));
+    deepSet(config, "discovery.ports", ports);
   }
 
   return config;

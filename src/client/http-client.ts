@@ -127,6 +127,11 @@ export class HttpClient {
     return this.config.server.baseUrl;
   }
 
+  /** Ports scanned by connection_discover (the known PC Manager port set). */
+  getDiscoveryPorts(): number[] {
+    return this.config.discovery.ports;
+  }
+
   /**
    * Points the client at a new server address (PC Manager picks a new port on
    * every start). Cookies are cleared because they are scoped by host, not
@@ -268,9 +273,10 @@ export class HttpClient {
   ): Promise<AxiosResponse<T>> {
     if (!this.config.server.baseUrl) {
       throw new NetworkError(
-        "No PC Manager address is configured. Ask the user for the IP and " +
-          "port shown in the PC Manager app on their phone, then call " +
-          "`connection_set` with host and port.",
+        "No PC Manager address is configured. Call `connection_discover` " +
+          "to scan the local network, or ask the user for the IP and port " +
+          "shown in the PC Manager app on their phone, then call " +
+          "`connection_set`.",
         false,
       );
     }

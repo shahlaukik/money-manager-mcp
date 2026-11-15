@@ -4,11 +4,11 @@ This guide covers how to use the Money Manager MCP tools with AI assistants.
 
 ## Tool Categories
 
-The MCP server provides **19 tools** organized into 8 categories:
+The MCP server provides **20 tools** organized into 8 categories:
 
 | Category       | Tools | Description                               |
 | -------------- | ----- | ----------------------------------------- |
-| Connection     | 1     | Change the server address at runtime      |
+| Connection     | 2     | Find and change the server address        |
 | Initialization | 1     | Get app configuration and categories      |
 | Transactions   | 4     | Create, read, update, delete transactions |
 | Summaries      | 2     | Financial reports and Excel export        |
@@ -23,9 +23,9 @@ The MCP server provides **19 tools** organized into 8 categories:
 
 ### `connection_set`
 
-Points the server at a new PC Manager address without restarting it. PC Manager picks a new port every time you start it on your phone, so tell the AI the address it shows. Whatever you leave out (host or port) stays the same. The new address is verified before switching — if nothing answers there, the call fails and the previous address stays active. A successful switch is remembered across sessions, and the session cookie is cleared, so the next call starts a fresh session.
+Points the server at a new PC Manager address without restarting it. PC Manager picks a new port every time you start it on your phone, so tell the AI the address it shows. Whatever you leave out (host or port) stays the same — except on the very first connection, where no address exists yet and both are required. The new address is verified before switching — if nothing answers there, the call fails and the previous address stays active. A successful switch is remembered across sessions, and the session cookie is cleared, so the next call starts a fresh session.
 
-**Parameters** (at least one is required):
+**Parameters** (at least one is required; both on the first connection):
 
 | Parameter | Type   | Required | Description                         |
 | --------- | ------ | -------- | ----------------------------------- |
@@ -38,6 +38,25 @@ Points the server at a new PC Manager address without restarting it. PC Manager 
 
 - "PC Manager is on port 4123 now"
 - "The server moved to 192.168.1.42:8888"
+
+---
+
+### `connection_discover`
+
+Scans the local network for Money Manager servers — the /24 subnet of each network interface, on the ports the PC Manager app uses (`8888, 6200, 7200, 8200, 9200` by default; configurable, see the [Setup Guide](SETUP.md)). Every hit is verified with a request only a real Money Manager server answers, so printers or router admin panels on the same ports are not reported. Read-only; nothing is changed.
+
+**Parameters** (all optional):
+
+| Parameter | Type     | Required | Description                                 |
+| --------- | -------- | -------- | ------------------------------------------- |
+| `ports`   | number[] | No       | Ports to scan instead of the configured set |
+
+**Returns:** `{ success, candidates: [{ baseUrl, host, port }], message? }` — `message` is present when nothing was found and explains the fallback (asking you for the address).
+
+**Example prompts:**
+
+- "Find my Money Manager on the network"
+- "My phone's on the Wi-Fi but I don't know the address"
 
 ---
 
