@@ -743,3 +743,5 @@ The API uses standard HTTP status codes:
 2. **Number Format:** Currency values are typically formatted with two decimal places
 3. **Session Management:** Session cookies are automatically managed by the HTTP client
 4. **Response Parsing:** The transaction list returns XML; every other endpoint returns JavaScript object-literal syntax (not strict JSON), which the MCP server's HTTP client normalizes
+5. **Unknown Endpoints:** The server is a catch-all — requesting a nonexistent path returns `HTTP 200` with an empty `text/plain` body, indistinguishable from real endpoints by status code alone. Endpoint existence must be judged by the presence of a response body (existing endpoints always return one)
+6. **Tags (not exposed):** The Android app gained transaction tags in v2.15.0 (Oct 2026), but as of PC Manager web UI v330 (verified live on 2026-11-16) the server exposes no tag endpoints and no tag fields in `getInitData` or the transaction XML — tags exist only in the app's local UI. Recheck when the PC Manager root page references a UI version newer than v330

@@ -120,6 +120,7 @@ export interface PaymentType {
 export interface MoneyBook {
   mbid: string;
   mbname: string;
+  baseDate?: string;
 }
 
 /** Asset name reference (simplified asset info). */
@@ -132,6 +133,7 @@ export interface AssetName {
 /** Initial data configuration. */
 export interface InitData {
   mbid: string;
+  mbName?: string;
   initStartDate: string;
   initEndDate: string;
 }
